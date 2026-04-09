@@ -1,20 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🌴 CANGGU JUMP
 
-# Run and deploy your AI Studio app
+**Built for Pieter Levels' VibeJam 2026**
 
-This contains everything you need to run your app locally.
+Canggu Jump is a high-energy, 8-bit rhythmic runner set in the chaotic and vibrant streets of Canggu, Bali. You play as a legendary Canggu Bodybuilder dodging the everyday obstacles of island life.
 
-View your app in AI Studio: https://ai.studio/apps/4e5d3855-a249-44cb-96e2-f52b0cc45557
+## 🎮 How to Play
 
-## Run Locally
+1.  **Enable Camera**: The game uses AI Pose Detection to track your movement.
+2.  **Jump in Real Life**: To jump over obstacles in the game, you must physically jump in front of your camera!
+3.  **Survive**: You have 3 lives. Don't let the Canggu chaos take them all.
 
-**Prerequisites:**  Node.js
+## 🏃 The Cast
 
+| Character | Role | Description |
+| :--- | :--- | :--- |
+| **💪 The Bodybuilder** | Hero | Fluo pink shorts, tanned, and ready to jump. |
+| **🛵 Solo Scooter** | Obstacle | The classic "Bike bike!!" solo rider. |
+| **🏄 Surfer Scooter** | Obstacle | Carrying a board, taking up more space. |
+| **👨‍👩‍👧 Triple Scooter** | Obstacle | Three people on one moped. Maximum chaos. |
+| **🐕 Bali Dogs** | Obstacle | They bark and run fast. Watch out for the puppies! |
+| **🎾 Padel Ball** | Obstacle | High-speed projectiles from the local courts. |
+| **🥤 Protein Shake** | Power-Up | Gives you temporary invincibility and a heroic theme song! |
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠️ Tech Stack
+
+- **React + Vite**: For a lightning-fast frontend.
+- **MediaPipe Pose**: AI-powered real-time body tracking.
+- **Web Audio API**: Real-time 8-bit sound synthesis (no external MP3s!).
+- **Tailwind CSS**: For the sleek, modern UI wrapper.
+
+## 📜 License
+
+This project is open-source and available under the **MIT License**.
