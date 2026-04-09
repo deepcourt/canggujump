@@ -1,0 +1,7 @@
+{
+  "name": "Canggu Jump: Balinese Bodybuilder",
+  "description": "Experience the ultimate Balinese fitness challenge! Control a tattooed bodybuilder in Canggu. Dodge Vespas, running dogs, and potholes. Collect protein shakes for temporary immunity and size boosts. Watch out for birds and Balinese offerings (Canang Sari) as you jump to the top!",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
