@@ -117,3 +117,77 @@ This approach is free, leverages the JavaScript/TypeScript ecosystem you're alre
 1.  **Onboarding/Tutorial:** Your idea for a practice mode is excellent. Before the first real game, run a slow-speed version with text overlays: "JUMP to dodge this!" This teaches the core mechanic without a boring wall of text.
 2.  **State Persistence:** Use `localStorage` in the browser to save the `highScore` and `playerName`. It's a one-line change that makes players feel like their progress matters when they return.
 3.  **Accessibility:** Add a **keyboard fallback** (e.g., Spacebar to jump). This is crucial for players who can't use a camera, and it also makes it much easier for *you* to test the game quickly without having to jump around.
+
+---
+
+### 10. Advanced Topics & Clarifications
+
+Here are answers to more detailed strategic questions.
+
+**Q: Can we use iMovie sounds if the game is open source?**
+
+**A:** It's still very risky. The key distinction is **Code License vs. Asset License**.
+*   Your game's *code* is MIT licensed, which is very permissive.
+*   Apple's sound effects, however, are governed by their own restrictive End User License Agreement (EULA). This EULA typically states that the assets can only be used to create content *with Apple's software* (like a video in iMovie).
+*   Distributing those sounds as part of another piece of software (your game), even if it's free and open-source, is almost certainly a violation of that license. A video on YouTube is different because you are distributing the *final video*, not the raw sound assets themselves.
+*   **Verdict:** To be safe for a jam, stick to sounds you create or those with a clear CC0 or similar permissive license.
+
+**Q: How can we preview sounds and art without playing the whole game?**
+
+**A:** This is what the **"Storybook" or "Scene Viewer"** I mentioned is for. It's a standard professional technique.
+*   **How it works:** You create a separate, hidden page in your app (e.g., at a URL like `/debug/scene-viewer`).
+*   On this page, you'd have a list of all your game entities (Player, Scooter, Padel Ball, etc.).
+*   When you click one, it renders that single entity in a small canvas. You can have buttons next to it like "Play Honk Sound," "Play Crash Animation," "Toggle Power-up Glow."
+*   This lets you test and perfect the look, feel, and sound of every single component in isolation, which is dramatically faster than trying to trigger it in-game.
+
+**Q: Is there a way to preview the game locally?**
+
+**A:** Yes, you're already set up for this!
+*   `npm run dev`: This command starts a local development server, usually at `http://localhost:3000`. Any changes you make to the code will instantly reload in your browser. This is your primary tool for day-to-day development.
+*   `npm run preview`: This command should be run *after* `npm run build`. It lets you test the final, optimized production version of your game locally before you deploy it.
+
+**Q: Can you explain more about Data-Driven Design?**
+
+**A:** It's about separating the "what" from the "how."
+*   **The "How" (Engine Code):** Your code knows *how* to draw a shape, *how* to move an object, *how* to check for collisions. This is generic.
+*   **The "What" (Data):** A configuration file (like a `.ts` or `.json` file) tells the engine *what* to draw and *what* its properties are.
+*   **Example:** Instead of having `drawPothole()` and `drawScooter()` functions, you have one `drawObstacle(obstacleData)` function. The data would look like this:
+    ```typescript
+    const PotholeData = {
+      type: 'POTHOLE',
+      art: [{ shape: 'ellipse', color: '#333' }],
+      behavior: 'static',
+      collisionType: 'ground'
+    };
+    const SushiData = { // For a future Tokyo level
+      type: 'SUSHI',
+      art: [{ shape: 'rect', color: 'white' }, { shape: 'circle', color: 'orange' }],
+      behavior: 'rolling',
+      collisionType: 'ground'
+    };
+    ```
+*   **How do you make sure it looks good?** Through **rules and constraints**. Your art direction defines a palette, a maximum size for ground obstacles, a set of allowed behaviors (`static`, `rolling`, `flying`). The data must follow these rules. If you allow user-generated content, you'd build a tool (a level editor) that forces them to work within these constraints.
+
+**Q: Shouldn't we validate ideas before we refactor?**
+
+**A:** This is a very sharp and correct observation. The best path is a hybrid:
+1.  **Validate:** Quickly hack in *one* new obstacle (e.g., the "Digital Nomad") into the current `DinoGame.tsx` file. See if it's fun. This takes a few hours.
+2.  **Refactor:** Now that you've confirmed "adding more varied obstacles is a good idea," you can be confident that refactoring the code to make adding the *next ten* obstacles easier is the right investment.
+You are refactoring the *pattern* of the code (how obstacles are managed), not the specific implementation of an unproven idea. Since we know the game needs more variety, refactoring the obstacle system is a safe bet.
+
+**Q: Is GitHub Actions free for the leaderboard?**
+
+**A:** Yes. For public repositories, GitHub provides a generous free tier for Actions (e.g., 2,000 minutes per month). A serverless function to update a Gist-based leaderboard would consume mere seconds per month. It is effectively free for this project's scale.
+
+**Q: What does "keyboard fallback" mean and how does it work?**
+
+**A:** "Fallback" means it's a secondary option that works in parallel. It doesn't interfere with the primary input.
+*   **Implementation:** You would add a keyboard event listener to your `useEffect` hook.
+    ```typescript
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.key === ' ') {
+        handleJumpSignal(); // You call the EXACT same function
+      }
+    });
+    ```
+*   The `handleJumpSignal()` function doesn't care what triggered it—a camera jump or a spacebar press. It just makes the character jump. This allows you to test the game quickly at your desk without needing to use the camera, and it makes the game accessible to more people. There is no risk of messing up the camera jump capability.
