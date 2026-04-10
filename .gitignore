@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.aider*
+game-dev-guidance.*
+improvements*.md

@@ -42,7 +42,8 @@ enum ObstacleType {
     DOG = 'DOG',
     CANANG_SARI = 'CANANG_SARI',
     PROTEIN_SHAKE = 'PROTEIN_SHAKE',
-    PADEL_BALL = 'PADEL_BALL'
+    PADEL_BALL = 'PADEL_BALL',
+    INFLUENCER = 'INFLUENCER'
 }
 
 interface GameEngineState {
@@ -55,6 +56,7 @@ interface GameEngineState {
     obstaclePool: Obstacle[];
     groundPool: GroundDetail[];
     sceneryPool: SceneryElement[];
+    particlePool: Particle[];
     spawnTimer: number;
     groundSpawnTimer: number;
     scenerySpawnTimer: number;
@@ -69,6 +71,9 @@ interface GameEngineState {
     bgType: 'OCEAN' | 'RICE_FIELD';
     bgTimer: number;
     bgScrollX: number;
+    // Juice
+    shakeTimer: number;
+    lastHitObstacleType: ObstacleType | null;
 }
 
 interface PlayerEntity {
@@ -85,8 +90,11 @@ interface PlayerEntity {
     powerUpLevel: number;
     lives: number;
     hitTimer: number;
+    // Juice
+    squashTimer: number;
+    stretchTimer: number;
     jump: () => boolean;
-    update: (dt: number, onStep?: () => void) => void;
+    update: (dt: number, onStep?: () => void, onLand?: () => void) => void;
     draw: (ctx: CanvasRenderingContext2D) => void;
     reset: () => void;
 }
@@ -370,24 +378,39 @@ class SceneryElement {
 const SoundSynth = {
     ctx: null as AudioContext | null,
     bufferCache: {} as Record<string, AudioBuffer>,
-    immunityOsc: null as OscillatorNode | null,
-    immunityGain: null as GainNode | null,
+    immunityInterval: null as any,
     
     init: () => {
-        if (!SoundSynth.ctx) {
-            const Win = window as ExtendedWindow;
-            SoundSynth.ctx = new (window.AudioContext || Win.webkitAudioContext)();
-        }
-        if (SoundSynth.ctx.state === 'suspended') {
-            SoundSynth.ctx.resume();
-        }
+        if (SoundSynth.ctx) return;
+        const Win = window as ExtendedWindow;
+        SoundSynth.ctx = new (window.AudioContext || Win.webkitAudioContext)();
+        
+        // Task 4.1 & 4.2: Pre-cache all sounds
+        SoundSynth.cacheSound('step', SoundSynth.createStepBuffer());
+        SoundSynth.cacheSound('jump', SoundSynth.createJumpBuffer());
+        SoundSynth.cacheSound('hit', SoundSynth.createHitBuffer());
+        SoundSynth.cacheSound('powerup', SoundSynth.createPowerupBuffer());
+        SoundSynth.cacheSound('click', SoundSynth.createClickBuffer());
+        SoundSynth.cacheSound('roar', SoundSynth.createNoiseBuffer(0.8));
+    },
 
-        if (!SoundSynth.bufferCache['step']) {
-            SoundSynth.bufferCache['step'] = SoundSynth.createNoiseBuffer(0.04);
-        }
-        if (!SoundSynth.bufferCache['roar']) {
-            SoundSynth.bufferCache['roar'] = SoundSynth.createNoiseBuffer(0.8);
-        }
+    cacheSound: (name: string, buffer: AudioBuffer) => {
+        SoundSynth.bufferCache[name] = buffer;
+    },
+
+    play: (name: string, volume: number = 0.1) => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx || !SoundSynth.bufferCache[name]) return;
+        
+        if (ctx.state === 'suspended') ctx.resume();
+        
+        const source = ctx.createBufferSource();
+        source.buffer = SoundSynth.bufferCache[name];
+        const gain = ctx.createGain();
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.start();
     },
 
     createNoiseBuffer: (duration: number): AudioBuffer => {
@@ -401,51 +424,76 @@ const SoundSynth = {
         return buffer;
     },
 
-    playJump: () => {
-        const ctx = SoundSynth.ctx;
-        if (!ctx) return;
-        
-        const t = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(150, t);
-        osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
-        
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-        
-        osc.start(t);
-        osc.stop(t + 0.1);
+    createStepBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.05;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 100);
+        }
+        return buffer;
     },
 
-    playStep: () => {
-        const ctx = SoundSynth.ctx;
-        if (!ctx || !SoundSynth.bufferCache['step']) return;
-        
-        const t = ctx.currentTime;
-        const noise = ctx.createBufferSource();
-        noise.buffer = SoundSynth.bufferCache['step'];
-        
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, t);
-        filter.frequency.exponentialRampToValueAtTime(100, t + 0.04);
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.3, t); 
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
-        
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-        
-        noise.start(t);
+    createJumpBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.15;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const freq = 150 + (600 - 150) * (t / duration);
+            data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-t * 10) * 0.5;
+        }
+        return buffer;
     },
+
+    createHitBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.3;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const noise = Math.random() * 2 - 1;
+            const freq = 100 * Math.exp(-t * 5);
+            data[i] = (noise + Math.sin(2 * Math.PI * freq * t)) * Math.exp(-t * 8) * 0.5;
+        }
+        return buffer;
+    },
+
+    createPowerupBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.4;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const freq = 440 * Math.pow(2, Math.floor(t * 10) / 12); // Arpeggio
+            data[i] = (t % 0.05 < 0.025 ? 1 : -1) * Math.exp(-t * 3) * 0.3;
+        }
+        return buffer;
+    },
+
+    createClickBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.05;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            data[i] = Math.sin(2 * Math.PI * 1000 * t) * Math.exp(-t * 200);
+        }
+        return buffer;
+    },
+
+    playJump: () => SoundSynth.play('jump', 0.15),
+    playStep: () => SoundSynth.play('step', 0.05),
+    playHit: () => SoundSynth.play('hit', 0.2),
+    playPowerup: () => SoundSynth.play('powerup', 0.2),
+    playClick: () => SoundSynth.play('click', 0.1),
+    playRoar: () => SoundSynth.play('roar', 0.3),
 
     playHonk: () => {
         const ctx = SoundSynth.ctx;
@@ -688,6 +736,9 @@ class Obstacle {
     crashVY: number = 0;
     crashRotation: number = 0;
     dogVariant: { color: string, scale: number } = { color: GAME_CONFIG.COLORS.DOG, scale: 1 };
+    // Influencer logic
+    selfieTimer: number = 0;
+    isPosing: boolean = false;
 
     spawn(startX: number) {
         this.x = startX;
@@ -696,34 +747,41 @@ class Obstacle {
         this.crashVX = 0;
         this.crashVY = 0;
         this.crashRotation = 0;
+        this.selfieTimer = 0;
+        this.isPosing = false;
         const r = Math.random();
-        if (r > 0.85) {
+        if (r > 0.90) { // Slightly increased threshold for new items
             this.type = ObstacleType.PROTEIN_SHAKE;
             this.width = 30;
             this.height = 50;
             this.y = GAME_CONFIG.GROUND_Y - this.height - 80; // Higher up
-        } else if (r > 0.78) {
+        } else if (r > 0.83) {
+            this.type = ObstacleType.INFLUENCER;
+            this.width = 40;
+            this.height = 65;
+            this.y = GAME_CONFIG.GROUND_Y - this.height;
+        } else if (r > 0.77) {
             this.type = ObstacleType.PADEL_BALL;
             this.width = 40;
             this.height = 40;
             this.y = 100; // Flying high
-        } else if (r > 0.70) {
+        } else if (r > 0.71) {
             this.type = ObstacleType.BIRD;
             this.width = 30;
             this.height = 20;
             this.y = 50 + Math.random() * 30;
-        } else if (r > 0.60) {
+        } else if (r > 0.62) {
             this.type = ObstacleType.TRIPLE_SCOOTER;
             this.width = 85;
             this.height = 55;
             this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else if (r > 0.50) {
+        } else if (r > 0.52) {
             this.type = ObstacleType.SCOOTER;
             this.width = 70;
             this.height = 55;
             this.y = GAME_CONFIG.GROUND_Y - this.height;
             this.hasSurfboard = Math.random() > 0.5;
-        } else if (r > 0.40) {
+        } else if (r > 0.42) {
             this.type = ObstacleType.DOG;
             const dogR = Math.random();
             if (dogR > 0.7) {
@@ -736,13 +794,13 @@ class Obstacle {
             this.width = 55 * this.dogVariant.scale;
             this.height = 35 * this.dogVariant.scale;
             this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else if (r > 0.25) {
+        } else if (r > 0.28) {
             this.type = ObstacleType.POTHOLE;
             const size = Math.random();
             this.width = size > 0.6 ? 80 : 40; // Big or small
             this.height = 10;
             this.y = GAME_CONFIG.GROUND_Y;
-        } else if (r > 0.12) {
+        } else if (r > 0.15) {
             this.type = ObstacleType.CANANG_SARI;
             this.width = 30;
             this.height = 15;
@@ -775,6 +833,22 @@ class Obstacle {
         if (this.type === ObstacleType.DOG) currentSpeed *= 1.4;
         if (this.type === ObstacleType.PADEL_BALL) currentSpeed *= 1.8;
         
+        if (this.type === ObstacleType.INFLUENCER) {
+            if (this.isPosing) {
+                this.selfieTimer -= dt;
+                currentSpeed = 0;
+                if (this.selfieTimer <= 0) {
+                    this.isPosing = false;
+                }
+            } else {
+                // Randomly stop to take a selfie if in view
+                if (this.x < 600 && this.x > 200 && Math.random() < 0.01) {
+                    this.isPosing = true;
+                    this.selfieTimer = 1.0 + Math.random() * 1.0;
+                }
+            }
+        }
+
         this.x -= currentSpeed * dt;
         this.cloudTimer += dt;
         this.smokeTimer += dt;
@@ -896,6 +970,58 @@ class Obstacle {
                 ctx.fillText("Bike..", cloudX + 30, cloudY - 5);
                 ctx.fillText("Bike bike!!!", cloudX + 30, cloudY + 10);
             }
+
+        } else if (this.type === ObstacleType.INFLUENCER) {
+            // Influencer Character
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            // Legs
+            const walk = this.isPosing ? 0 : Math.sin(Date.now() / 100) * 5;
+            ctx.fillRect(ix + 12, iy + 45, 6, 20 + walk);
+            ctx.fillRect(ix + 22, iy + 45, 6, 20 - walk);
+            
+            // Body (Crop top)
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(ix + 10, iy + 25, 20, 15);
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            ctx.fillRect(ix + 10, iy + 40, 20, 5); // Belly
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(ix + 20, iy + 15, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sunglasses
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(ix + 15, iy + 12, 12, 4);
+            
+            // Hair (Influencer bun)
+            ctx.fillStyle = '#4b2c20';
+            ctx.beginPath();
+            ctx.arc(ix + 20, iy + 5, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Phone/Camera
+            ctx.fillStyle = '#333';
+            const armAngle = this.isPosing ? -0.5 : 0.5;
+            ctx.save();
+            ctx.translate(ix + 25, iy + 30);
+            ctx.rotate(armAngle);
+            ctx.fillRect(0, 0, 15, 6); // Arm
+            ctx.fillStyle = '#000';
+            ctx.fillRect(12, -4, 5, 10); // Phone
+            
+            // Selfie Flash Effect
+            if (this.isPosing && Math.floor(Date.now() / 100) % 3 === 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(15, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+                // Flash star
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(10, -10, 10, 20);
+                ctx.fillRect(5, -5, 20, 10);
+            }
+            ctx.restore();
 
         } else if (this.type === ObstacleType.DOG) {
             // More realistic dog - Facing Left (towards player)
@@ -1046,6 +1172,74 @@ class Obstacle {
     }
 }
 
+class Particle {
+    active: boolean = false;
+    x: number = 0;
+    y: number = 0;
+    vx: number = 0;
+    vy: number = 0;
+    life: number = 0;
+    maxLife: number = 0;
+    color: string = '#fff';
+    size: number = 2;
+    type: 'DUST' | 'SPARKLE' = 'DUST';
+
+    spawn(x: number, y: number, color: string, type: 'DUST' | 'SPARKLE') {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.type = type;
+        this.active = true;
+        
+        if (type === 'DUST') {
+            this.vx = (Math.random() - 0.5) * 100;
+            this.vy = -Math.random() * 50;
+            this.maxLife = 0.5 + Math.random() * 0.5;
+            this.size = 2 + Math.random() * 4;
+        } else {
+            this.vx = (Math.random() - 0.5) * 200;
+            this.vy = (Math.random() - 0.5) * 200;
+            this.maxLife = 0.8 + Math.random() * 0.4;
+            this.size = 2 + Math.random() * 3;
+        }
+        this.life = this.maxLife;
+    }
+
+    update(dt: number) {
+        if (!this.active) return;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        
+        if (this.type === 'DUST') {
+            this.vy += 100 * dt; // Slight gravity for dust
+            this.vx *= 0.95; // Friction
+        } else {
+            this.vx *= 0.98;
+            this.vy *= 0.98;
+        }
+
+        this.life -= dt;
+        if (this.life <= 0) this.active = false;
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+        if (!this.active) return;
+        ctx.save();
+        ctx.globalAlpha = this.life / this.maxLife;
+        ctx.fillStyle = this.color;
+        if (this.type === 'SPARKLE') {
+            // Draw a small star/cross
+            ctx.fillRect(this.x - this.size/2, this.y - this.size/6, this.size, this.size/3);
+            ctx.fillRect(this.x - this.size/6, this.y - this.size/2, this.size/3, this.size);
+        } else {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
 // Pool Helpers
 const getFromPool = <T extends { active: boolean }>(pool: T[], factory: () => T): T => {
     const item = pool.find(p => !p.active);
@@ -1069,6 +1263,8 @@ const createBodyBuilder = (): PlayerEntity => ({
     powerUpLevel: 0,
     lives: 3,
     hitTimer: 0,
+    squashTimer: 0,
+    stretchTimer: 0,
     
     reset() {
         this.y = GAME_CONFIG.DINO_GROUND_Y - 20;
@@ -1081,12 +1277,27 @@ const createBodyBuilder = (): PlayerEntity => ({
         this.powerUpLevel = 0;
         this.lives = 3;
         this.hitTimer = 0;
+        this.squashTimer = 0;
+        this.stretchTimer = 0;
     },
 
     draw(ctx: CanvasRenderingContext2D) {
         const sizeMult = this.powerUpLevel === 2 ? 1.6 : (this.powerUpLevel === 1 ? 1.3 : 1);
-        const w = this.width * sizeMult;
-        const h = this.height * sizeMult;
+        
+        let w = this.width * sizeMult;
+        let h = this.height * sizeMult;
+
+        // Apply Squash and Stretch
+        if (this.squashTimer > 0) {
+            const factor = 1 + (this.squashTimer / 0.15) * 0.2;
+            w *= factor;
+            h /= factor;
+        } else if (this.stretchTimer > 0) {
+            const factor = 1 + (this.stretchTimer / 0.15) * 0.2;
+            w /= factor;
+            h *= factor;
+        }
+
         const ix = Math.floor(this.x);
         const iy = Math.floor(this.y - (h - this.height));
 
@@ -1117,7 +1328,7 @@ const createBodyBuilder = (): PlayerEntity => ({
         
         // Massive Torso (Muscles) - Rounded for smoothness
         ctx.beginPath();
-        ctx.roundRect(ix + 12 * sizeMult, iy + 15 * sizeMult, 40 * sizeMult, 38 * sizeMult, 10 * sizeMult);
+        ctx.roundRect(ix + (12/65)*w, iy + (15/80)*h, (40/65)*w, (38/80)*h, 10 * sizeMult);
         ctx.fill();
         ctx.stroke();
         
@@ -1126,20 +1337,8 @@ const createBodyBuilder = (): PlayerEntity => ({
         ctx.lineWidth = 2 * sizeMult;
         // Chest Tattoo (More detailed tribal)
         ctx.beginPath();
-        ctx.moveTo(ix + 18 * sizeMult, iy + 22 * sizeMult);
-        ctx.quadraticCurveTo(ix + 32 * sizeMult, iy + 35 * sizeMult, ix + 46 * sizeMult, iy + 22 * sizeMult);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(ix + 22 * sizeMult, iy + 28 * sizeMult);
-        ctx.quadraticCurveTo(ix + 32 * sizeMult, iy + 40 * sizeMult, ix + 42 * sizeMult, iy + 28 * sizeMult);
-        ctx.stroke();
-        
-        // Arm Tattoos (Swirls)
-        ctx.beginPath();
-        ctx.arc(ix + 5 * sizeMult, iy + 25 * sizeMult, 4 * sizeMult, 0, Math.PI * 1.5);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(ix + 60 * sizeMult, iy + 25 * sizeMult, 4 * sizeMult, 0, Math.PI * 1.5);
+        ctx.moveTo(ix + (18/65)*w, iy + (22/80)*h);
+        ctx.quadraticCurveTo(ix + (32/65)*w, iy + (35/80)*h, ix + (46/65)*w, iy + (22/80)*h);
         ctx.stroke();
         
         // Massive Arms (Biceps) - Rounded
@@ -1147,77 +1346,47 @@ const createBodyBuilder = (): PlayerEntity => ({
         ctx.lineWidth = 2 * sizeMult;
         ctx.fillStyle = GAME_CONFIG.COLORS.SKIN;
         ctx.beginPath();
-        ctx.roundRect(ix - 5 * sizeMult, iy + 15 * sizeMult, 18 * sizeMult, 35 * sizeMult, 8 * sizeMult); // Left arm
+        ctx.roundRect(ix - (5/65)*w, iy + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult); // Left arm
         ctx.fill();
         ctx.stroke();
         ctx.beginPath();
-        ctx.roundRect(ix + 52 * sizeMult, iy + 15 * sizeMult, 18 * sizeMult, 35 * sizeMult, 8 * sizeMult); // Right arm
+        ctx.roundRect(ix + (52/65)*w, iy + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult); // Right arm
         ctx.fill();
         ctx.stroke();
         
         // Head - Rounded
         ctx.beginPath();
-        ctx.roundRect(ix + 24 * sizeMult, iy - 8 * sizeMult, 20 * sizeMult, 24 * sizeMult, 6 * sizeMult);
+        ctx.roundRect(ix + (24/65)*w, iy - (8/80)*h, (20/65)*w, (24/80)*h, 6 * sizeMult);
         ctx.fill();
         ctx.stroke();
         
         // Ray-Ban Style Sunglasses
         ctx.fillStyle = '#111';
-        // Left lens
         ctx.beginPath();
-        ctx.roundRect(ix + 26 * sizeMult, iy - 2 * sizeMult, 7 * sizeMult, 6 * sizeMult, [2, 2, 5, 5]);
+        ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 5, 5]);
+        ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 5, 5]);
         ctx.fill();
-        // Right lens
-        ctx.beginPath();
-        ctx.roundRect(ix + 35 * sizeMult, iy - 2 * sizeMult, 7 * sizeMult, 6 * sizeMult, [2, 2, 5, 5]);
-        ctx.fill();
-        // Bridge
-        ctx.fillRect(ix + 33 * sizeMult, iy - 1 * sizeMult, 2 * sizeMult, 2 * sizeMult);
         
-        // Shine on glasses
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fillRect(ix + 27 * sizeMult, iy - 1 * sizeMult, 2 * sizeMult, 2 * sizeMult);
-        ctx.fillRect(ix + 36 * sizeMult, iy - 1 * sizeMult, 2 * sizeMult, 2 * sizeMult);
-
-        // Smile
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1.5 * sizeMult;
-        ctx.beginPath();
-        ctx.arc(ix + 34 * sizeMult, iy + 8 * sizeMult, 5 * sizeMult, 0.2 * Math.PI, 0.8 * Math.PI);
-        ctx.stroke();
-
-        // Pink Spherical Helmet (Only when immune)
-        if (this.powerUpTimer > 0) {
-            ctx.fillStyle = GAME_CONFIG.COLORS.PINK_FLUO;
-            ctx.beginPath();
-            ctx.arc(ix + 34 * sizeMult, iy + 2 * sizeMult, 18 * sizeMult, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(0,0,0,0.8)';
-            ctx.fillRect(ix + 22 * sizeMult, iy - 2 * sizeMult, 24 * sizeMult, 10 * sizeMult); // Visor
-        }
-
         // Shorts - PINK FLUO (Guaranteed)
         ctx.fillStyle = '#FF00FF'; 
         ctx.beginPath();
-        ctx.roundRect(ix + 12 * sizeMult, iy + 50 * sizeMult, 40 * sizeMult, 15 * sizeMult, 4 * sizeMult);
+        ctx.roundRect(ix + (12/65)*w, iy + (50/80)*h, (40/65)*w, (15/80)*h, 4 * sizeMult);
         ctx.fill();
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2 * sizeMult;
         ctx.stroke();
         
         // Legs Animation - Rounded
         ctx.fillStyle = GAME_CONFIG.COLORS.SKIN;
-        const legW = 12 * sizeMult;
+        const legW = (12/65)*w;
         ctx.beginPath();
         if (!this.grounded) {
-            ctx.roundRect(ix + 18 * sizeMult, iy + 65 * sizeMult, legW, 15 * sizeMult, 4);
-            ctx.roundRect(ix + 40 * sizeMult, iy + 65 * sizeMult, legW, 15 * sizeMult, 4);
+            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (15/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (15/80)*h, 4);
         } else if (this.legState) {
-            ctx.roundRect(ix + 18 * sizeMult, iy + 65 * sizeMult, legW, 20 * sizeMult, 4);
-            ctx.roundRect(ix + 40 * sizeMult, iy + 65 * sizeMult, legW, 10 * sizeMult, 4);
+            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (20/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (10/80)*h, 4);
         } else {
-            ctx.roundRect(ix + 18 * sizeMult, iy + 65 * sizeMult, legW, 10 * sizeMult, 4);
-            ctx.roundRect(ix + 40 * sizeMult, iy + 65 * sizeMult, legW, 20 * sizeMult, 4);
+            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (10/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (20/80)*h, 4);
         }
         ctx.fill();
         ctx.stroke();
@@ -1230,12 +1399,13 @@ const createBodyBuilder = (): PlayerEntity => ({
             this.dy = -GAME_CONFIG.JUMP_FORCE;
             this.grounded = false;
             this.jumpTimer = 0.1;
+            this.stretchTimer = 0.15; // Start stretch
             return true;
         }
         return false;
     },
 
-    update(dt: number, onStep?: () => void) {
+    update(dt: number, onStep?: () => void, onLand?: () => void) {
         if (this.jumpTimer > 0) this.jumpTimer -= dt;
         if (this.powerUpTimer > 0) {
             this.powerUpTimer -= dt;
@@ -1249,12 +1419,17 @@ const createBodyBuilder = (): PlayerEntity => ({
             this.hitTimer -= dt;
         }
 
+        if (this.squashTimer > 0) this.squashTimer -= dt;
+        if (this.stretchTimer > 0) this.stretchTimer -= dt;
+
         this.animTimer += dt;
         if (this.animTimer > 0.1) {
             this.legState = !this.legState;
             this.animTimer = 0;
             if (this.grounded && onStep) onStep();
         }
+
+        const wasGrounded = this.grounded;
 
         this.dy += GAME_CONFIG.GRAVITY * dt;
         this.y += this.dy * dt;
@@ -1264,12 +1439,33 @@ const createBodyBuilder = (): PlayerEntity => ({
             this.y = groundY;
             this.dy = 0;
             this.grounded = true;
+            if (!wasGrounded) {
+                this.squashTimer = 0.15; // Landed!
+                if (onLand) onLand();
+            }
         } else {
             this.grounded = false;
+            // Stretch at the peak
+            if (Math.abs(this.dy) < 100) {
+                this.stretchTimer = 0.1;
+            }
         }
     }
 });
 
+
+const GAME_OVER_MESSAGES: Record<string, string> = {
+    [ObstacleType.SCOOTER]: "Learned about traffic the hard way.",
+    [ObstacleType.TRIPLE_SCOOTER]: "Learned about traffic the hard way.",
+    [ObstacleType.DOG]: "Tried to pet the dog. It didn't go well.",
+    [ObstacleType.CANANG_SARI]: "Disrespected the offerings. Bad karma.",
+    [ObstacleType.PADEL_BALL]: "Should have worn a helmet. Padel is serious business.",
+    [ObstacleType.POTHOLE]: "The road giveth, and the road taketh away.",
+    [ObstacleType.DOG_POO]: "You've had a crappy day.",
+    [ObstacleType.BIRD]: "Got swooped.",
+    [ObstacleType.INFLUENCER]: "Ruined their perfect shot. Now everyone's mad.",
+    [ObstacleType.PROTEIN_SHAKE]: "Wait... how did you die to a protein shake?", // Should not happen
+};
 
 const DinoGame: React.FC = () => {
     // --- REFS ---
@@ -1302,6 +1498,7 @@ const DinoGame: React.FC = () => {
         obstaclePool: Array.from({ length: 10 }, () => new Obstacle()),
         groundPool: Array.from({ length: 50 }, () => new GroundDetail()),
         sceneryPool: Array.from({ length: 15 }, () => new SceneryElement()),
+        particlePool: Array.from({ length: 30 }, () => new Particle()),
         spawnTimer: 0,
         groundSpawnTimer: 0,
         scenerySpawnTimer: 0,
@@ -1315,7 +1512,10 @@ const DinoGame: React.FC = () => {
         playerName: 'LEGEND',
         bgType: 'OCEAN',
         bgTimer: 0,
-        bgScrollX: 0
+        bgScrollX: 0,
+        // Juice
+        shakeTimer: 0,
+        lastHitObstacleType: null
     });
 
     const [playerNameInput, setPlayerNameInput] = useState("");
@@ -1336,6 +1536,32 @@ const DinoGame: React.FC = () => {
     useEffect(() => {
         mutedRef.current = isMuted;
     }, [isMuted]);
+
+    // --- MODULE 0: FOUNDATIONAL QUICK WINS ---
+
+    // Task 0.1: Keyboard Fallback
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if user is typing in an input field
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleJumpSignal();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Task 0.2: Load High Score
+    useEffect(() => {
+        const savedHighScore = localStorage.getItem('cangguJumpHighScore');
+        if (savedHighScore) {
+            engineRef.current.highScore = parseInt(savedHighScore, 10);
+        }
+    }, []);
 
     // --- GAME LOGIC ---
 
@@ -1405,6 +1631,7 @@ const DinoGame: React.FC = () => {
         
         if (engine.score / 10 > engine.highScore) {
             engine.highScore = Math.floor(engine.score / 10);
+            localStorage.setItem('cangguJumpHighScore', engine.highScore.toString());
         }
 
         SoundSynth.stopImmunityMusic();
@@ -1433,6 +1660,15 @@ const DinoGame: React.FC = () => {
 
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext('2d', { alpha: false })!; // Optimize for no transparency
+
+        // Update Juice
+        if (engine.shakeTimer > 0) engine.shakeTimer -= dt;
+
+        ctx.save();
+        if (engine.shakeTimer > 0) {
+            const shakeAmount = 5;
+            ctx.translate((Math.random() - 0.5) * shakeAmount, (Math.random() - 0.5) * shakeAmount);
+        }
 
         // 1. Draw Background (Parallax Layers)
         // Sky
@@ -1572,8 +1808,23 @@ const DinoGame: React.FC = () => {
         // 4. Logic & Draw Player
         engine.player.update(dt, () => {
             if (!mutedRef.current) SoundSynth.playStep();
+        }, () => {
+            // onLand
+            for (let i = 0; i < 8; i++) {
+                const p = getFromPool(engine.particlePool, () => new Particle());
+                p.spawn(engine.player.x + engine.player.width / 2, GAME_CONFIG.GROUND_Y, '#ddd', 'DUST');
+            }
         });
         engine.player.draw(ctx);
+
+        // Update and Draw Particles
+        for (let i = 0; i < engine.particlePool.length; i++) {
+            const p = engine.particlePool[i];
+            if (p.active) {
+                p.update(dt);
+                p.draw(ctx);
+            }
+        }
 
         // Draw Hearts (Lives)
         for (let i = 0; i < 3; i++) {
@@ -1643,17 +1894,25 @@ const DinoGame: React.FC = () => {
                         player.powerUpTimer = 7; // 7 seconds
                         player.powerUpLevel = Math.min(player.powerUpLevel + 1, 2);
                         if (!mutedRef.current) SoundSynth.startImmunityMusic();
+                        // Particle effect for powerup
+                        for (let j = 0; j < 15; j++) {
+                            const p = getFromPool(engine.particlePool, () => new Particle());
+                            p.spawn(obs.x + obs.width / 2, obs.y + obs.height / 2, 'cyan', 'SPARKLE');
+                        }
                     } else if (player.powerUpTimer > 0) {
                         // Immunity knock-off
                         obs.isCrashed = true;
                         obs.crashVX = 500 + Math.random() * 300;
                         obs.crashVY = -500 - Math.random() * 300;
+                        engine.shakeTimer = 0.1; // Light shake when immune
                     } else if (player.hitTimer <= 0) {
                         // Human collision logic: All take 1 life
                         obs.active = false;
                         player.lives -= 1;
                         player.hitTimer = 1.0; // 1 second flash
+                        engine.shakeTimer = 0.3; // Intense shake
                         if (player.lives <= 0) {
+                            engine.lastHitObstacleType = obs.type;
                             gameOver();
                         }
                     }
@@ -1670,7 +1929,10 @@ const DinoGame: React.FC = () => {
             ctx.textAlign = "right";
             ctx.fillText(scoreStr, canvas.width - 20, 30);
             
+            ctx.restore(); // Restore shake translation
             engine.animationId = requestAnimationFrame(runGameLoop);
+        } else {
+            ctx.restore();
         }
     };
 
@@ -1703,6 +1965,7 @@ const DinoGame: React.FC = () => {
         engine.bgTimer = 0;
         engine.bgScrollX = 0;
         engine.bgType = 'OCEAN';
+        engine.lastHitObstacleType = null;
         engine.player.reset();
         engine.lastTime = 0;
         engine.gameRunning = true;
@@ -1718,9 +1981,18 @@ const DinoGame: React.FC = () => {
             engineRef.current.playerName = playerNameInput.trim().toUpperCase();
         }
         SoundSynth.init();
+        if (!mutedRef.current) SoundSynth.playClick();
         setHasStarted(true);
         engineRef.current.hasStarted = true;
         resetGame();
+    };
+
+    const shareOnX = () => {
+        if (!mutedRef.current) SoundSynth.playClick();
+        const score = Math.floor(engineRef.current.score / 10);
+        const text = `I just scored ${score} points in Canggu Jump! 🌴💪\n\nCan you beat me? #canggujump #vibejam`;
+        const url = window.location.href;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
     };
 
     const handleJumpSignal = () => {
@@ -1979,7 +2251,10 @@ const DinoGame: React.FC = () => {
 
                 {/* MUTE BUTTON */}
                 <button
-                    onClick={() => setIsMuted(!isMuted)}
+                    onClick={() => {
+                        if (!mutedRef.current) SoundSynth.playClick();
+                        setIsMuted(!isMuted);
+                    }}
                     className={`group absolute top-[4%] left-[2.5%] z-20 w-[3%] h-auto text-[#535353] hover:text-[#333] transition-colors focus:outline-none focus:ring-2 focus:ring-[${GAME_CONFIG.COLORS.FOCUS}] rounded-sm aspect-square`}
                     aria-label={isMuted ? "Unmute" : "Mute"}
                     style={{ minWidth: '1px' }}
@@ -2028,7 +2303,11 @@ const DinoGame: React.FC = () => {
                             <div className="flex flex-col items-center gap-6">
                                 {!cameraReady ? (
                                     <button 
-                                        onClick={enableCam} 
+                                        onClick={() => {
+                                            SoundSynth.init();
+                                            if (!mutedRef.current) SoundSynth.playClick();
+                                            enableCam();
+                                        }} 
                                         className={`px-8 py-4 bg-white text-black font-press-start text-base cursor-pointer hover:bg-orange-500 hover:text-white transition-all rounded-lg shadow-xl transform hover:scale-105`}
                                     >
                                         ENABLE CAMERA
@@ -2054,25 +2333,40 @@ const DinoGame: React.FC = () => {
                 {/* GAME OVER SCREEN */}
                 {(hasStarted && !gameRunning) && (
                     <div className="absolute top-0 left-0 w-full h-full bg-black/80 flex flex-col items-center justify-center z-10 rounded-lg text-center p-2 md:p-4">
-                        <div className="text-red-500 text-2xl md:text-4xl font-press-start mb-6 drop-shadow-md">GAME OVER</div>
+                        <div className="text-red-500 text-2xl md:text-4xl font-press-start mb-6 drop-shadow-md uppercase">GAME OVER</div>
                         
-                        <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl mb-6 border border-white/20">
-                            <div className="text-white text-xs font-press-start mb-4 opacity-80">
+                        <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-2xl mb-6 border border-white/20 w-full max-w-[80%]">
+                            <div className="text-white text-[10px] md:text-xs font-press-start mb-2 opacity-80 uppercase">
                                 {engineRef.current.playerName}
                             </div>
                             <div className="text-white text-xl md:text-2xl font-press-start mb-2">
                                 SCORE: {Math.floor(engineRef.current.score / 10)}
                             </div>
-                            <div className="text-orange-400 text-sm md:text-lg font-press-start">
+                            <div className="text-orange-400 text-sm md:text-lg font-press-start mb-4">
                                 HIGH SCORE: {engineRef.current.highScore}
                             </div>
+                            {engineRef.current.lastHitObstacleType && (
+                                <div className="text-yellow-200 text-[10px] md:text-xs font-press-start leading-relaxed italic border-t border-white/10 pt-4">
+                                    "{GAME_OVER_MESSAGES[engineRef.current.lastHitObstacleType]}"
+                                </div>
+                            )}
                         </div>
 
-                        <div className="text-white text-xs md:text-sm font-press-start mb-8 animate-pulse">
-                            {canRestart ? "JUMP TO RESTART" : "GET READY..."}
+                        <div className="flex flex-col gap-4 items-center">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); shareOnX(); }}
+                                className="bg-[#1DA1F2] hover:bg-[#1A91DA] text-white px-6 py-3 rounded-lg font-press-start text-[10px] md:text-xs flex items-center gap-2 transition-all transform hover:scale-105 active:scale-95"
+                            >
+                                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                                SHARE ON X
+                            </button>
+
+                            <div className="text-white text-[10px] md:text-sm font-press-start animate-pulse mt-2">
+                                {canRestart ? "JUMP TO RESTART" : "GET READY..."}
+                            </div>
                         </div>
                         
-                        <p className="text-white/50 text-[10px] font-press-start italic">
+                        <p className="text-white/30 text-[8px] md:text-[10px] font-press-start italic mt-6">
                             Never skip leg days. Keep jumping.
                         </p>
                     </div>
