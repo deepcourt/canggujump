@@ -35,7 +35,7 @@ This document outlines a detailed, atomic plan to elevate "Canggu Jump" into a p
 *   **Task 1.2: Add Particle Effects:**
     *   Create a simple particle system using an object pool.
     *   Emit dust cloud particles when the player lands after a jump.
-    *   Emit sparkling particles when the player collects a Crypto Coin.
+    *   Emit sparkling particles when the player collects a Protein Shake.
 *   **Task 1.3: Implement Player "Squash and Stretch":** Animate the player character's dimensions to add life.
     *   Briefly "squash" (make wider and shorter) the player sprite upon landing.
     *   Briefly "stretch" (make taller and thinner) the player sprite at the peak of a jump.
@@ -60,9 +60,6 @@ This document outlines a detailed, atomic plan to elevate "Canggu Jump" into a p
 
 *   **Task 3.1: Create the "Influencer" Obstacle:**
     *   Design a new obstacle character that runs, but periodically stops dead in its tracks for 1-2 seconds to "pose for a selfie," creating a timing challenge for the player.
-*   **Task 3.2: Create the "Crypto Coin" Power-Up:**
-    *   Design a new collectible item that looks like a spinning, glowing Bitcoin.
-    *   When collected, it grants a temporary **2x score multiplier**. This replaces the previous Protein Shake/invincibility idea.
 
 ## **Module 4: Audio Overhaul**
 
