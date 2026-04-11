@@ -1529,7 +1529,7 @@ const DinoGame: React.FC = () => {
         prevTime: 0,
         smoothedVelocity: 0,
         peakVelocity: 0,
-        JUMP_VELOCITY_THRESHOLD: 2.5,
+        JUMP_VELOCITY_THRESHOLD: 1.8,
         lastPredictionTime: 0
     });
 
