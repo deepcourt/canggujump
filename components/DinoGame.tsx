@@ -5,11 +5,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { GAME_CONFIG, ObstacleType, GAME_OVER_MESSAGES } from '../game/config';
-import { SoundSynth } from '../src/game/audio';
+import { SoundSynth } from '../game/audio';
+import { PlayerEntity, createBodyBuilder } from '../game/entities/Player';
+import { Particle } from '../game/entities/Particle';
+import { GroundDetail } from '../game/entities/Ground';
+import { Obstacle } from '../game/entities/Obstacle';
+import { SceneryElement } from '../game/entities/Scenery';
 
-// --- TYPES & INTERFACES ---
+// --- VISION STATE ---
 
-interface VisionState {
+
     poseLandmarker: any;
     lastVideoTime: number;
     results: any;
