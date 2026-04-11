@@ -1360,12 +1360,21 @@ const createBodyBuilder = (): PlayerEntity => ({
         ctx.fill();
         ctx.stroke();
         
-        // Ray-Ban Style Sunglasses
-        ctx.fillStyle = '#111';
-        ctx.beginPath();
-        ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
-        ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
-        ctx.fill();
+        if (this.powerUpTimer > 0) {
+            // Pink Helmet for powered-up state
+            ctx.fillStyle = GAME_CONFIG.COLORS.PINK_FLUO;
+            ctx.beginPath();
+            ctx.roundRect(ix + (22/65)*w, iy - (15/80)*h, (24/65)*w, (15/80)*h, [6*sizeMult, 6*sizeMult, 2*sizeMult, 2*sizeMult]);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Ray-Ban Style Sunglasses
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
+            ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
+            ctx.fill();
+        }
         
         // Shorts - PINK FLUO (Guaranteed)
         ctx.fillStyle = '#FF00FF'; 
@@ -1529,7 +1538,7 @@ const DinoGame: React.FC = () => {
         prevTime: 0,
         smoothedVelocity: 0,
         peakVelocity: 0,
-        JUMP_VELOCITY_THRESHOLD: 1.8,
+        JUMP_VELOCITY_THRESHOLD: 1.2,
         lastPredictionTime: 0
     });
 
