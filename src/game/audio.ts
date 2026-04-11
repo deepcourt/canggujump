@@ -13,6 +13,7 @@ export const SoundSynth = {
     ctx: null as AudioContext | null,
     bufferCache: {} as Record<string, AudioBuffer>,
     immunityInterval: null as any,
+    muted: false,
     
     init: () => {
         if (SoundSynth.ctx) return;
@@ -33,6 +34,7 @@ export const SoundSynth = {
     },
 
     play: (name: string, volume: number = 0.1) => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx || !SoundSynth.bufferCache[name]) return;
         
@@ -130,6 +132,7 @@ export const SoundSynth = {
     playRoar: () => SoundSynth.play('roar', 0.3),
 
     playHonk: () => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx) return;
         const t = ctx.currentTime;
@@ -161,6 +164,7 @@ export const SoundSynth = {
     },
 
     playBark: (scale: number = 1.0) => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx) return;
         const t = ctx.currentTime;
@@ -218,6 +222,7 @@ export const SoundSynth = {
     },
 
     playPadelWhoosh: () => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx) return;
         const t = ctx.currentTime;
@@ -261,6 +266,7 @@ export const SoundSynth = {
     },
 
     startImmunityMusic: () => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx || SoundSynth.immunityInterval) return;
         
@@ -295,6 +301,7 @@ export const SoundSynth = {
     },
 
     playRoar: () => {
+        if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx) return;
         const t = ctx.currentTime;

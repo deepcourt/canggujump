@@ -7,11 +7,12 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GAME_CONFIG, ObstacleType, GAME_OVER_MESSAGES } from '../game/config';
 import { SoundSynth } from '../game/audio';
 import { createGameEngine, GameEngineState } from '../game/engine';
-import { PlayerEntity } from '../game/entities/Player';
+import { PlayerEntity, createBodyBuilder } from '../game/entities/Player';
 import { Particle } from '../game/entities/Particle';
 import { GroundDetail } from '../game/entities/Ground';
 import { Obstacle } from '../game/entities/Obstacle';
 import { SceneryElement } from '../game/entities/Scenery';
+import { getFromPool } from '../game/utils';
 
 // --- VISION STATE ---
 
@@ -110,6 +111,7 @@ const DinoGame: React.FC = () => {
 
     useEffect(() => {
         mutedRef.current = isMuted;
+        SoundSynth.muted = isMuted;
     }, [isMuted]);
 
     // --- MODULE 0: FOUNDATIONAL QUICK WINS ---
@@ -214,9 +216,7 @@ const DinoGame: React.FC = () => {
         setGameRunning(false);
         setCanRestart(false); 
         
-        if (!mutedRef.current) {
-            SoundSynth.playRoar();
-        }
+        SoundSynth.playRoar();
         
         setTimeout(() => {
             engine.canRestart = true;
@@ -382,7 +382,7 @@ const DinoGame: React.FC = () => {
 
         // 4. Logic & Draw Player
         engine.player.update(dt, () => {
-            if (!mutedRef.current) SoundSynth.playStep();
+            SoundSynth.playStep();
         }, () => {
             // onLand
             for (let i = 0; i < 8; i++) {
@@ -468,7 +468,7 @@ const DinoGame: React.FC = () => {
                         obs.active = false;
                         player.powerUpTimer = 7; // 7 seconds
                         player.powerUpLevel = Math.min(player.powerUpLevel + 1, 2);
-                        if (!mutedRef.current) SoundSynth.startImmunityMusic();
+                        SoundSynth.startImmunityMusic();
                         // Particle effect for powerup
                         for (let j = 0; j < 15; j++) {
                             const p = getFromPool(engine.particlePool, () => new Particle());
@@ -556,14 +556,14 @@ const DinoGame: React.FC = () => {
             engineRef.current.playerName = playerNameInput.trim().toUpperCase();
         }
         SoundSynth.init();
-        if (!mutedRef.current) SoundSynth.playClick();
+        SoundSynth.playClick();
         setHasStarted(true);
         engineRef.current.hasStarted = true;
         resetGame();
     };
 
     const shareOnX = () => {
-        if (!mutedRef.current) SoundSynth.playClick();
+        SoundSynth.playClick();
         const score = Math.floor(engineRef.current.score / 10);
         const text = `I just scored ${score} points in Canggu Jump! 🌴💪\n\nCan you beat me? #canggujump #vibejam`;
         const url = window.location.href;
@@ -579,7 +579,7 @@ const DinoGame: React.FC = () => {
         const engine = engineRef.current;
         if (engine.gameRunning) {
             const jumped = engine.player.jump();
-            if (jumped && !mutedRef.current) {
+            if (jumped) {
                 SoundSynth.playJump();
             }
         } else if (!engine.gameRunning && engine.canRestart) {
@@ -827,7 +827,7 @@ const DinoGame: React.FC = () => {
                 {/* MUTE BUTTON */}
                 <button
                     onClick={() => {
-                        if (!mutedRef.current) SoundSynth.playClick();
+                        SoundSynth.playClick();
                         setIsMuted(!isMuted);
                     }}
                     className={`group absolute top-[4%] left-[2.5%] z-20 w-[3%] h-auto text-[#535353] hover:text-[#333] transition-colors focus:outline-none focus:ring-2 focus:ring-[${GAME_CONFIG.COLORS.FOCUS}] rounded-sm aspect-square`}
@@ -880,7 +880,7 @@ const DinoGame: React.FC = () => {
                                     <button 
                                         onClick={() => {
                                             SoundSynth.init();
-                                            if (!mutedRef.current) SoundSynth.playClick();
+                                            SoundSynth.playClick();
                                             enableCam();
                                         }} 
                                         className={`px-8 py-4 bg-white text-black font-press-start text-base cursor-pointer hover:bg-orange-500 hover:text-white transition-all rounded-lg shadow-xl transform hover:scale-105`}

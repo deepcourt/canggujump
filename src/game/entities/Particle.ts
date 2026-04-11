@@ -67,7 +67,7 @@ export class Particle {
             ctx.fillRect(this.x - this.size/6, this.y - this.size/2, this.size/3, this.size);
         } else { // DUST
             ctx.beginPath();
-            ctxR.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.restore();

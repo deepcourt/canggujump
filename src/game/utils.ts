@@ -18,3 +18,15 @@ export const getFromPool = <T extends { active: boolean }>(pool: T[], factory: (
     pool.push(newItem);
     return newItem;
 };
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+export const getFromPool = <T extends { active: boolean }>(pool: T[], factory: () => T): T => {
+    const item = pool.find(p => !p.active);
+    if (item) return item;
+    const newItem = factory();
+    pool.push(newItem);
+    return newItem;
+};

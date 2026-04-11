@@ -141,9 +141,20 @@ export class Obstacle {
         this.smokeTimer += dt;
 
         // Honk logic
-        if (this.type === ObstacleType.SCOOTER && !this.honked && this.x < GAME_CONFIG.CANVAS_WIDTH - 150) {
-            if (!SoundSynth.ctx) SoundSynth.init(); // Ensure audio context is ready
-            if (!isMuted && Math.random() < 0.3) SoundSynth.playHonk();
+        if ((this.type === ObstacleType.SCOOTER || this.type === ObstacleType.TRIPLE_SCOOTER) && !this.honked && this.x < 500) {
+            SoundSynth.playHonk();
+            this.honked = true;
+        }
+
+        // Bark logic
+        if (this.type === ObstacleType.DOG && !this.honked && this.x < 500) {
+            SoundSynth.playBark(this.dogVariant.scale);
+            this.honked = true; // Reusing honked for bark
+        }
+
+        // Padel Whoosh
+        if (this.type === ObstacleType.PADEL_BALL && !this.honked && this.x < 600) {
+            SoundSynth.playPadelWhoosh();
             this.honked = true;
         }
     }
