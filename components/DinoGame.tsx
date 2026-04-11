@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GAME_CONFIG, ObstacleType, GAME_OVER_MESSAGES } from '../game/config';
 import { SoundSynth } from '../game/audio';
-import { createGameEngine, GameEngineState } from '../src/game/engine';
+import { createGameEngine, GameEngineState } from '../game/engine';
 import { PlayerEntity } from '../game/entities/Player';
 import { Particle } from '../game/entities/Particle';
 import { GroundDetail } from '../game/entities/Ground';
