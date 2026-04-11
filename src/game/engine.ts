@@ -6,7 +6,7 @@
 import { GAME_CONFIG, ObstacleType } from './config';
 import { OBSTACLE_DEFINITIONS } from './obstacles.config';
 import { SoundSynth } from './audio';
-import { getFromPool } from './utils';
+import { getFromPool, loadImages } from './utils';
 import { PlayerEntity, createBodyBuilder } from './entities/Player';
 import { Particle } from './entities/Particle';
 import { GroundDetail } from './entities/Ground';
@@ -49,6 +49,7 @@ export interface GameEngineState {
     bgScrollX: number;
     shakeTimer: number;
     lastHitObstacleType: ObstacleType | null;
+    explosionImages: HTMLImageElement[];
 }
 
 export interface GameEngineCallbacks {
@@ -89,7 +90,14 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         bgScrollX: 0,
         shakeTimer: 0,
         lastHitObstacleType: null,
+        explosionImages: []
     };
+
+    // Pre-load explosion images
+    const explosionPaths = Array.from({ length: 9 }, (_, i) => `/images/explosion0${i}.png`);
+    loadImages(explosionPaths).then(imgs => {
+        state.explosionImages = imgs;
+    }).catch(err => console.error("Failed to load explosion images:", err));
 
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
@@ -149,6 +157,15 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         SoundSynth.stopImmunityMusic();
         SoundSynth.stopMusic();
         SoundSynth.playRoar();
+
+        // --- TRIGGER EXPLOSION ---
+        if (state.explosionImages.length > 0) {
+            const randomIndex = Math.floor(Math.random() * state.explosionImages.length);
+            const explosionImg = state.explosionImages[randomIndex];
+            const p = getFromPool(state.particlePool, () => new Particle());
+            p.spawn(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2, '#fff', 'EXPLOSION', explosionImg);
+        }
+
         callbacks.onStateChange({ ...state });
         setTimeout(() => {
             state.canRestart = true;
