@@ -4,6 +4,7 @@
 */
 
 import { GAME_CONFIG, ObstacleType } from './config';
+import { OBSTACLE_DEFINITIONS } from './obstacles.config';
 import { SoundSynth } from './audio';
 import { getFromPool } from './utils';
 import { PlayerEntity, createBodyBuilder } from './entities/Player';
@@ -11,6 +12,19 @@ import { Particle } from './entities/Particle';
 import { GroundDetail } from './entities/Ground';
 import { Obstacle } from './entities/Obstacle';
 import { SceneryElement } from './entities/Scenery';
+
+const getRandomObstacleConfig = () => {
+    const totalWeight = OBSTACLE_DEFINITIONS.reduce((sum, def) => sum + def.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (const def of OBSTACLE_DEFINITIONS) {
+        if (random < def.weight) {
+            return def;
+        }
+        random -= def.weight;
+    }
+    // Fallback in case of floating point issues
+    return OBSTACLE_DEFINITIONS[OBSTACLE_DEFINITIONS.length - 1];
+};
 
 export interface GameEngineState {
     gameRunning: boolean;
@@ -87,8 +101,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             let count = r > 0.9 ? 2 : 1;
             let nextX = GAME_CONFIG.CANVAS_WIDTH;
             for (let i = 0; i < count; i++) {
+                const config = getRandomObstacleConfig();
                 const obstacle = getFromPool(state.obstaclePool, () => new Obstacle());
-                obstacle.spawn(nextX);
+                obstacle.spawn(nextX, config);
                 nextX += obstacle.width + (10 + Math.random() * 30);
             }
             state.spawnTimer = 1.5 + (count * 0.5) + Math.random() * 1.5;

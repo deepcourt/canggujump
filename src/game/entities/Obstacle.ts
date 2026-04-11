@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { GAME_CONFIG, ObstacleType, GAME_OVER_MESSAGES } from '../config';
+import { GAME_CONFIG, ObstacleType } from '../config';
 import { SoundSynth } from '../audio';
-import { getFromPool } from '../utils';
+import type { ObstacleConfig } from '../obstacles.config';
 
 export class Obstacle {
     active: boolean = false;
@@ -14,6 +14,7 @@ export class Obstacle {
     width: number = 0;
     height: number = 0;
     type: ObstacleType = ObstacleType.DOG_POO;
+    speedMultiplier: number = 1;
     cloudTimer: number = 0;
     smokeTimer: number = 0;
     hasSurfboard: boolean = false;
@@ -27,8 +28,9 @@ export class Obstacle {
     selfieTimer: number = 0;
     isPosing: boolean = false;
 
-    spawn(startX: number) {
+    spawn(startX: number, config: ObstacleConfig) {
         this.x = startX;
+        this.active = true;
         this.honked = false;
         this.isCrashed = false;
         this.crashVX = 0;
@@ -36,71 +38,22 @@ export class Obstacle {
         this.crashRotation = 0;
         this.selfieTimer = 0;
         this.isPosing = false;
-        const r = Math.random();
-        if (r > 0.90) { // Slightly increased threshold for new items
-            this.type = ObstacleType.PROTEIN_SHAKE;
-            this.width = 30;
-            this.height = 50;
-            this.y = GAME_CONFIG.GROUND_Y - this.height - 80; // Higher up
-        } else if (r > 0.83) {
-            this.type = ObstacleType.INFLUENCER;
-            this.width = 40;
-            this.height = 65;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else if (r > 0.77) {
-            this.type = ObstacleType.PADEL_BALL;
-            this.width = 40;
-            this.height = 40;
-            this.y = 100; // Flying high
-        } else if (r > 0.71) {
-            this.type = ObstacleType.BIRD;
-            this.width = 30;
-            this.height = 20;
-            this.y = 50 + Math.random() * 30;
-        } else if (r > 0.62) {
-            this.type = ObstacleType.TRIPLE_SCOOTER;
-            this.width = 85;
-            this.height = 55;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else if (r > 0.52) {
-            this.type = ObstacleType.SCOOTER;
-            this.width = 70;
-            this.height = 55;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-            this.hasSurfboard = Math.random() > 0.5;
-        } else if (r > 0.42) {
-            this.type = ObstacleType.DOG;
-            const dogR = Math.random();
-            if (dogR > 0.7) {
-                this.dogVariant = { color: '#4B5563', scale: 0.7 }; // Small grey dog
-            } else if (dogR > 0.4) {
-                this.dogVariant = { color: '#374151', scale: 1.1 }; // Large dark grey dog
-            } else {
-                this.dogVariant = { color: GAME_CONFIG.COLORS.DOG, scale: 1.0 }; // Standard brown dog
-            }
-            this.width = 55 * this.dogVariant.scale;
-            this.height = 35 * this.dogVariant.scale;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else if (r > 0.28) {
-            this.type = ObstacleType.POTHOLE;
-            const size = Math.random();
-            this.width = size > 0.6 ? 80 : 40; // Big or small
-            this.height = 10;
-            this.y = GAME_CONFIG.GROUND_Y;
-        } else if (r > 0.15) {
-            this.type = ObstacleType.CANANG_SARI;
-            this.width = 30;
-            this.height = 15;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-        } else {
-            this.type = ObstacleType.DOG_POO;
-            this.width = 25;
-            this.height = 12;
-            this.y = GAME_CONFIG.GROUND_Y - this.height;
-        }
-        this.active = true;
         this.cloudTimer = 0;
         this.smokeTimer = 0;
+
+        this.type = config.type;
+        this.width = config.width;
+        this.height = config.height;
+        this.y = config.y;
+        this.speedMultiplier = config.speedMultiplier || 1;
+
+        // Reset special properties before custom spawn
+        this.hasSurfboard = false;
+        this.dogVariant = { color: GAME_CONFIG.COLORS.DOG, scale: 1.0 };
+
+        if (config.customSpawn) {
+            config.customSpawn(this);
+        }
     }
 
     update(dt: number, speed: number) {
@@ -115,10 +68,7 @@ export class Obstacle {
             return;
         }
 
-        let currentSpeed = speed;
-        if (this.type === ObstacleType.BIRD) currentSpeed *= 1.2;
-        if (this.type === ObstacleType.DOG) currentSpeed *= 1.4;
-        if (this.type === ObstacleType.PADEL_BALL) currentSpeed *= 1.8;
+        let currentSpeed = speed * this.speedMultiplier;
         
         if (this.type === ObstacleType.INFLUENCER) {
             if (this.isPosing) {
