@@ -1316,7 +1316,7 @@ const createBodyBuilder = (): PlayerEntity => ({
             // Pink Helmet for powered-up state
             ctx.fillStyle = GAME_CONFIG.COLORS.PINK_FLUO;
             ctx.beginPath();
-            ctx.roundRect(ix + (22/65)*w, iy - (15/80)*h, (24/65)*w, (15/80)*h, [6*sizeMult, 6*sizeMult, 2*sizeMult, 2*sizeMult]);
+            ctx.roundRect(ix + (22/65)*w, iy - (15/80)*h, (24/65)*w, (15/80)*h, 5 * sizeMult);
             ctx.fill();
         } else {
             // Ray-Ban Style Sunglasses
@@ -1476,7 +1476,7 @@ const DinoGame: React.FC = () => {
         prevTime: 0,
         smoothedVelocity: 0,
         peakVelocity: 0,
-        JUMP_VELOCITY_THRESHOLD: 0.8,
+        JUMP_VELOCITY_THRESHOLD: 1.5,
         lastPredictionTime: 0
     });
 
@@ -2039,7 +2039,7 @@ const DinoGame: React.FC = () => {
                     currentVelocity = normalizedDy / dt;
                 }
                 
-                state.smoothedVelocity = state.smoothedVelocity * 0.5 + currentVelocity * 0.5;
+                state.smoothedVelocity = state.smoothedVelocity * 0.3 + currentVelocity * 0.7;
                 
                 if (state.smoothedVelocity > state.peakVelocity) {
                     state.peakVelocity = state.smoothedVelocity;
