@@ -54,7 +54,7 @@ const DinoGame: React.FC = () => {
     });
 
     useEffect(() => {
-        SoundSynth.muted = isMuted;
+        SoundSynth.setMuted(isMuted);
     }, [isMuted]);
 
     // Initialize game engine

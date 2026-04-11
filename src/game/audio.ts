@@ -14,6 +14,8 @@ export const SoundSynth = {
     bufferCache: {} as Record<string, AudioBuffer>,
     immunityInterval: null as any,
     muted: false,
+    musicElement: null as HTMLAudioElement | null,
+    musicVolume: 0.3,
     
     init: () => {
         if (SoundSynth.ctx) return;
@@ -27,6 +29,13 @@ export const SoundSynth = {
         SoundSynth.cacheSound('powerup', SoundSynth.createPowerupBuffer());
         SoundSynth.cacheSound('click', SoundSynth.createClickBuffer());
         SoundSynth.cacheSound('roar', SoundSynth.createNoiseBuffer(0.8));
+
+        // Load background music
+        if (!SoundSynth.musicElement) {
+            SoundSynth.musicElement = new Audio('audio/background-music.mp3');
+            SoundSynth.musicElement.loop = true;
+            SoundSynth.musicElement.volume = SoundSynth.musicVolume;
+        }
     },
 
     cacheSound: (name: string, buffer: AudioBuffer) => {
@@ -130,6 +139,27 @@ export const SoundSynth = {
     playPowerup: () => SoundSynth.play('powerup', 0.2),
     playClick: () => SoundSynth.play('click', 0.1),
     playRoar: () => SoundSynth.play('roar', 0.3),
+
+    setMuted: (isMuted: boolean) => {
+        SoundSynth.muted = isMuted;
+        if (SoundSynth.musicElement) {
+            SoundSynth.musicElement.muted = isMuted;
+        }
+        if (isMuted) {
+            SoundSynth.stopImmunityMusic(); // Also stop jingles
+        }
+    },
+
+    playMusic: () => {
+        if (SoundSynth.muted || !SoundSynth.musicElement) return;
+        SoundSynth.musicElement.play().catch(e => console.error("Music play failed:", e));
+    },
+
+    stopMusic: () => {
+        if (!SoundSynth.musicElement) return;
+        SoundSynth.musicElement.pause();
+        SoundSynth.musicElement.currentTime = 0;
+    },
 
     playHonk: () => {
         if (SoundSynth.muted) return;
@@ -269,6 +299,10 @@ export const SoundSynth = {
         if (SoundSynth.muted) return;
         const ctx = SoundSynth.ctx;
         if (!ctx || SoundSynth.immunityInterval) return;
+
+        if (SoundSynth.musicElement) {
+            SoundSynth.musicElement.volume = SoundSynth.musicVolume * 0.3;
+        }
         
         const playNote = (freq: number, start: number, duration: number) => {
             const osc = ctx.createOscillator();
@@ -297,6 +331,9 @@ export const SoundSynth = {
         if (SoundSynth.immunityInterval) {
             clearInterval(SoundSynth.immunityInterval);
             SoundSynth.immunityInterval = null;
+        }
+        if (SoundSynth.musicElement) {
+            SoundSynth.musicElement.volume = SoundSynth.musicVolume;
         }
     },
 

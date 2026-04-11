@@ -147,6 +147,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             localStorage.setItem('cangguJumpHighScore', state.highScore.toString());
         }
         SoundSynth.stopImmunityMusic();
+        SoundSynth.stopMusic();
         SoundSynth.playRoar();
         callbacks.onStateChange({ ...state });
         setTimeout(() => {
@@ -319,6 +320,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.gameRunning = true;
         state.hasStarted = true;
         callbacks.onStateChange({ ...state });
+        SoundSynth.playMusic();
         runGameLoop(0);
     };
 
