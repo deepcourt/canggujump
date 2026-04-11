@@ -1363,8 +1363,8 @@ const createBodyBuilder = (): PlayerEntity => ({
         // Ray-Ban Style Sunglasses
         ctx.fillStyle = '#111';
         ctx.beginPath();
-        ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 5, 5]);
-        ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 5, 5]);
+        ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
+        ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
         ctx.fill();
         
         // Shorts - PINK FLUO (Guaranteed)
@@ -1435,7 +1435,7 @@ const createBodyBuilder = (): PlayerEntity => ({
         this.y += this.dy * dt;
 
         const groundY = GAME_CONFIG.GROUND_Y - this.height;
-        if (this.y > groundY) {
+        if (this.y >= groundY) {
             this.y = groundY;
             this.dy = 0;
             this.grounded = true;
