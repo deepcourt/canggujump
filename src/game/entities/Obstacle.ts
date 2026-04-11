@@ -161,209 +161,298 @@ export class Obstacle {
 
     draw(ctx: CanvasRenderingContext2D) {
         if (!this.active) return;
-
         const ix = Math.floor(this.x);
         const iy = Math.floor(this.y);
 
-        ctx.save();
-        ctx.translate(ix + this.width/2, iy + this.height/2);
-        ctx.rotate(this.crashRotation);
-        ctx.scale(this.isCrashed ? 0.7 : 1, this.isCrashed ? 0.7 : 1);
+        if (this.isCrashed) {
+            ctx.save();
+            ctx.translate(ix + this.width / 2, iy + this.height / 2);
+            ctx.rotate(this.crashRotation);
+            ctx.translate(-(ix + this.width / 2), -(iy + this.height / 2));
+        }
+
+        if (this.type === ObstacleType.SCOOTER || this.type === ObstacleType.TRIPLE_SCOOTER) {
+            // Vespa/Scoopy style - Facing Left
+            if (this.type === ObstacleType.TRIPLE_SCOOTER) {
+                ctx.fillStyle = '#FB923C'; // Orange for triple
+            } else if (this.hasSurfboard) {
+                ctx.fillStyle = '#3b82f6'; // Blue for surfer
+            } else {
+                ctx.fillStyle = GAME_CONFIG.COLORS.SCOOTER; // Yellow for single
+            }
+            
+            // Body curve
+            ctx.beginPath();
+            ctx.roundRect(ix + 15, iy + 25, 45, 20, 10);
+            ctx.fill();
+            // Front shield
+            ctx.fillRect(ix + 5, iy + 15, 15, 30);
+            // Handlebar
+            ctx.fillStyle = '#333';
+            ctx.fillRect(ix + 2, iy + 12, 12, 4);
+            
+            // Wheels
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(ix + 15, iy + 45, 10, 0, Math.PI * 2);
+            ctx.arc(ix + 50, iy + 45, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Surfboard variant
+            if (this.hasSurfboard) {
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.ellipse(ix + 35, iy + 30, 35, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Riders
+            const riderCount = this.type === ObstacleType.TRIPLE_SCOOTER ? 3 : 1;
+            for (let i = 0; i < riderCount; i++) {
+                const offset = i * 12;
+                ctx.fillStyle = GAME_CONFIG.COLORS.SKIN;
+                ctx.fillRect(ix + 25 + offset, iy + 5, 18, 25); // Torso
+                
+                // Sphere Helmet
+                ctx.fillStyle = GAME_CONFIG.COLORS.HELMET;
+                ctx.beginPath();
+                ctx.arc(ix + 34 + offset, iy - 1, 10, 0, Math.PI * 2);
+                ctx.fill();
+                // Visor
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(ix + 24 + offset, iy - 5, 12, 6);
+            }
+
+            // Smoke effect (More prominent)
+            if (Math.floor(this.smokeTimer * 20) % 2 === 0) {
+                ctx.fillStyle = 'rgba(150,150,150,0.5)';
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    const sx = ix + 60 + i * 10;
+                    const sy = iy + 40 - (this.smokeTimer % 0.4) * 30 - i * 5;
+                    ctx.arc(sx, sy, 4 + i * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Cloud - Only for solo scooter (not surfer, not triple)
+            if (!this.isCrashed && this.type === ObstacleType.SCOOTER && !this.hasSurfboard) {
+                const cloudX = ix - 40;
+                const cloudY = iy - 50;
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(cloudX, cloudY, 25, 0, Math.PI * 2);
+                ctx.arc(cloudX + 30, cloudY - 10, 20, 0, Math.PI * 2);
+                ctx.arc(cloudX + 60, cloudY, 25, 0, Math.PI * 2);
+                ctx.arc(cloudX + 30, cloudY + 15, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.font = "10px 'Press Start 2P'";
+                ctx.textAlign = "center";
+                ctx.fillText("Bike..", cloudX + 30, cloudY - 5);
+                ctx.fillText("Bike bike!!!", cloudX + 30, cloudY + 10);
+            }
+
+        } else if (this.type === ObstacleType.INFLUENCER) {
+            // Influencer Character
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            // Legs
+            const walk = this.isPosing ? 0 : Math.sin(Date.now() / 100) * 5;
+            ctx.fillRect(ix + 12, iy + 45, 6, 20 + walk);
+            ctx.fillRect(ix + 22, iy + 45, 6, 20 - walk);
+            
+            // Body (Crop top)
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(ix + 10, iy + 25, 20, 15);
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            ctx.fillRect(ix + 10, iy + 40, 20, 5); // Belly
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(ix + 20, iy + 15, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sunglasses
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(ix + 15, iy + 12, 12, 4);
+            
+            // Hair (Influencer bun)
+            ctx.fillStyle = '#4b2c20';
+            ctx.beginPath();
+            ctx.arc(ix + 20, iy + 5, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Phone/Camera
+            ctx.fillStyle = '#333';
+            const armAngle = this.isPosing ? -0.5 : 0.5;
+            ctx.save();
+            ctx.translate(ix + 25, iy + 30);
+            ctx.rotate(armAngle);
+            ctx.fillRect(0, 0, 15, 6); // Arm
+            ctx.fillStyle = '#000';
+            ctx.fillRect(12, -4, 5, 10); // Phone
+            
+            // Selfie Flash Effect
+            if (this.isPosing && Math.floor(Date.now() / 100) % 3 === 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(15, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+                // Flash star
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(10, -10, 10, 20);
+                ctx.fillRect(5, -5, 20, 10);
+            }
+            ctx.restore();
+
+        } else if (this.type === ObstacleType.DOG) {
+            // More realistic dog - Facing Left (towards player)
+            ctx.fillStyle = this.dogVariant.color;
+            const s = this.dogVariant.scale;
+            // Body
+            ctx.beginPath();
+            ctx.roundRect(ix + 10 * s, iy + 10 * s, 40 * s, 18 * s, 5 * s);
+            ctx.fill();
+            // Head (Facing Left)
+            ctx.beginPath();
+            ctx.roundRect(ix, iy, 15 * s, 15 * s, 3 * s);
+            ctx.fill();
+            // Ears
+            ctx.fillRect(ix + 5 * s, iy - 5 * s, 5 * s, 8 * s);
+            // Tail
+            ctx.beginPath();
+            ctx.moveTo(ix + 50 * s, iy + 15 * s);
+            ctx.quadraticCurveTo(ix + 65 * s, iy + 5 * s, ix + 60 * s, iy + 20 * s);
+            ctx.strokeStyle = this.dogVariant.color;
+            ctx.lineWidth = 4 * s;
+            ctx.stroke();
+            // Legs
+            const legOffset = Math.sin(Date.now() / 60) * 8;
+            ctx.fillRect(ix + 15 * s, iy + 25 * s, 6 * s, 10 * s + legOffset);
+            ctx.fillRect(ix + 35 * s, iy + 25 * s, 6 * s, 10 * s - legOffset);
+        } else if (this.type === ObstacleType.BIRD) {
+            ctx.fillStyle = GAME_CONFIG.COLORS.BIRD;
+            ctx.beginPath();
+            const wingY = Math.sin(Date.now() / 100) * 10;
+            ctx.moveTo(ix, iy);
+            ctx.lineTo(ix + 15, iy + wingY);
+            ctx.lineTo(ix + 30, iy);
+            ctx.stroke();
+        } else if (this.type === ObstacleType.PADEL_BALL) {
+            // Traces
+            ctx.fillStyle = 'rgba(153, 255, 0, 0.3)';
+            for (let i = 1; i < 5; i++) {
+                ctx.beginPath();
+                ctx.arc(ix + 20 + i * 15, iy + 20, 20 - i * 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.fillStyle = GAME_CONFIG.COLORS.PADEL;
+            ctx.beginPath();
+            ctx.arc(ix + 20, iy + 20, 20, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = 'black';
+            ctx.font = "8px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText("PADEL", ix + 20, iy + 25);
+        } else if (this.type === ObstacleType.CANANG_SARI) {
+            // Spiritual Glow
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff5252';
+            
+            ctx.fillStyle = GAME_CONFIG.COLORS.CANANG;
+            ctx.beginPath();
+            ctx.roundRect(ix, iy, 30, 15, 3); // Basket
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+
+            // Flowers (More detailed)
+            ctx.fillStyle = '#ff5252'; ctx.beginPath(); ctx.arc(ix + 8, iy + 5, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#FACC15'; ctx.beginPath(); ctx.arc(ix + 22, iy + 5, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#4ADE80'; ctx.beginPath(); ctx.arc(ix + 15, iy + 10, 4, 0, Math.PI * 2); ctx.fill();
+
+            // Incense Smoke (Fluid)
+            const smokeY = iy - 10 - (this.smokeTimer % 1) * 30;
+            const smokeX = ix + 15 + Math.sin(this.smokeTimer * 5) * 5;
+            ctx.fillStyle = 'rgba(200,200,200,0.4)';
+            ctx.beginPath();
+            ctx.arc(smokeX, smokeY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Spirit Particles (Floating up)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            for(let i=0; i<3; i++) {
+                const px = ix + 5 + (i * 10) + Math.sin(Date.now() / 300 + i) * 5;
+                const py = iy - 5 - ((Date.now() / 10 + i * 20) % 40);
+                ctx.beginPath();
+                ctx.arc(px, py, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (this.type === ObstacleType.PROTEIN_SHAKE) {
+            // Glow effect
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'cyan';
+            
+            // Giant Bottle Shape
+            ctx.fillStyle = GAME_CONFIG.COLORS.PROTEIN;
+            ctx.beginPath();
+            ctx.roundRect(ix, iy + 10, 30, 40, 5); // Main body
+            ctx.fill();
+            ctx.fillRect(ix + 7, iy, 16, 10); // Cap
+            
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = 'white';
+            ctx.font = "6px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText("PROTEIN", ix + 15, iy + 35);
+
+            // Green Arrow pointing down
+            const arrowY = iy - 30 + Math.sin(Date.now() / 150) * 5;
+            ctx.fillStyle = '#4ADE80';
+            ctx.beginPath();
+            ctx.moveTo(ix + 5, arrowY);
+            ctx.lineTo(ix + 25, arrowY);
+            ctx.lineTo(ix + 15, arrowY + 15);
+            ctx.fill();
+        } else if (this.type === ObstacleType.POTHOLE) {
+            ctx.fillStyle = GAME_CONFIG.COLORS.POTHOLE;
+            ctx.beginPath();
+            ctx.ellipse(ix + this.width / 2, iy, this.width / 2, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else { // DOG_POO
+            ctx.fillStyle = GAME_CONFIG.COLORS.POO;
+            ctx.fillRect(ix, iy + 5, 25, 7);
+            ctx.fillRect(ix + 5, iy, 15, 5);
+            // Smell lines
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.5)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 3; i++) {
+                const sx = ix + 5 + i * 8;
+                const sy = iy - 5 - Math.sin(Date.now() / 200 + i) * 5;
+                ctx.beginPath();
+                ctx.moveTo(sx, iy);
+                ctx.lineTo(sx, sy);
+                ctx.stroke();
+            }
+            // Flies
+            ctx.fillStyle = 'black';
+            for (let i = 0; i < 4; i++) {
+                const fx = ix + 5 + Math.sin(Date.now() / 100 + i) * 10;
+                const fy = iy - 10 + Math.cos(Date.now() / 150 + i) * 10;
+                ctx.fillRect(fx, fy, 2, 2);
+            }
+        }
 
         if (this.isCrashed) {
-            ctx.fillStyle = '#555'; // Darker grey for crashed
-            ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+            ctx.restore();
         }
-
-        switch(this.type) {
-            case ObstacleType.SCOOTER:
-            case ObstacleType.TRIPLE_SCOOTER:
-                // Scooter Body
-                ctx.fillStyle = this.type === ObstacleType.TRIPLE_SCOOTER ? '#FFA500' : GAME_CONFIG.COLORS.SCOOTER; // Orange or Yellow
-                ctx.beginPath();
-                ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height * 0.6, 10);
-                ctx.fill();
-                // Wheels
-                ctx.fillStyle = '#333';
-                ctx.beginPath();
-                ctx.arc(-this.width/2 + 20, this.height/2 - 5, 10, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(this.width/2 - 20, this.height/2 - 5, 10, 0, Math.PI * 2);
-                ctx.fill();
-                // Handlebars
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(-this.width/2, -this.height/2);
-                ctx.lineTo(-this.width/2 + 10, -this.height/2 - 10);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(this.width/2, -this.height/2);
-                ctx.lineTo(this.width/2 - 10, -this.height/2 - 10);
-                ctx.stroke();
-
-                if (this.hasSurfboard) {
-                    ctx.fillStyle = '#F87171'; // Reddish-pink surfboard
-                    ctx.beginPath();
-                    ctx.roundRect(-15, -this.height/2 - 25, 30, 8, 3);
-                    ctx.fill();
-                }
-                break;
-            case ObstacleType.POTHOLE:
-                ctx.fillStyle = GAME_CONFIG.COLORS.POTHOLE;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case ObstacleType.DOG_POO:
-                ctx.fillStyle = GAME_CONFIG.COLORS.POO;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case ObstacleType.BIRD:
-                ctx.fillStyle = '#333';
-                const birdScale = this.width / 30; // Base width is 30
-                // Body
-                ctx.beginPath();
-                ctx.ellipse(0, -5, 15 * birdScale, 10 * birdScale, 0, 0, Math.PI * 2);
-                ctx.fill();
-                // Tail
-                ctx.beginPath();
-                ctx.moveTo(-15 * birdScale, -5);
-                ctx.lineTo(-30 * birdScale, -10);
-                ctx.lineTo(-30 * birdScale, 0);
-                ctx.closePath();
-                ctx.fill();
-                // Beak
-                ctx.beginPath();
-                ctx.moveTo(15 * birdScale, -5);
-                ctx.lineTo(25 * birdScale, -8);
-                ctx.lineTo(25 * birdScale, -2);
-                ctx.closePath();
-                ctx.fill();
-                break;
-            case ObstacleType.CANANG_SARI:
-                ctx.fillStyle = GAME_CONFIG.COLORS.CANANG;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                // Small flowers/details
-                ctx.fillStyle = '#FF4500'; // Orange-red accent
-                ctx.beginPath();
-                ctx.arc(-8, -5, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(8, -5, 3, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case ObstacleType.PROTEIN_SHAKE:
-                ctx.fillStyle = GAME_CONFIG.COLORS.PROTEIN;
-                ctx.beginPath();
-                ctx.roundRect(-this.width/2, -this.height/2, this.width, this.height * 0.7, 5);
-                ctx.fill();
-                // Cap
-                ctx.beginPath();
-                ctx.roundRect(-this.width/2, -this.height/2 - 5, this.width, 5, 3);
-                ctx.fill();
-                break;
-            case ObstacleType.PADEL_BALL:
-                ctx.fillStyle = GAME_CONFIG.COLORS.PADEL;
-                ctx.beginPath();
-                ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
-                ctx.fill();
-                // Lines
-                ctx.strokeStyle = '#555';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(-this.width/2 + 5, 0);
-                ctx.lineTo(this.width/2 - 5, 0);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, -this.width/2 + 5);
-                ctx.lineTo(0, this.width/2 - 5);
-                ctx.stroke();
-                break;
-            case ObstacleType.INFLUENCER:
-                // Influencer Character
-                ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
-                // Legs
-                const walk = this.isPosing ? 0 : Math.sin(Date.now() / 100) * 5;
-                ctx.fillRect(-17, 10, 6, 20 + walk);
-                ctx.fillRect(5, 10, 6, 20 - walk);
-                
-                // Body (Crop top)
-                ctx.fillStyle = '#ff6b6b';
-                ctx.fillRect(-15, -5, 30, 15);
-                ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
-                ctx.fillRect(-15, 10, 30, 5); // Belly
-                
-                // Head
-                ctx.beginPath();
-                ctx.arc(0, -15, 10, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Sunglasses
-                ctx.fillStyle = '#1a1a1a';
-                ctx.fillRect(-10, -12, 12, 4);
-                
-                // Hair (Influencer bun)
-                ctx.fillStyle = '#4b2c20';
-                ctx.beginPath();
-                ctx.arc(0, -25, 5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Phone/Camera
-                ctx.fillStyle = '#333';
-                const armAngle = this.isPosing ? -0.5 : 0.5;
-                ctx.save();
-                ctx.translate(10, -15);
-                ctx.rotate(armAngle);
-                ctx.fillRect(0, 0, 15, 6); // Arm
-                ctx.fillStyle = '#000';
-                ctx.fillRect(12, -4, 5, 10); // Phone
-                
-                // Selfie Flash Effect
-                if (this.isPosing && Math.floor(Date.now() / 100) % 3 === 0) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    ctx.beginPath();
-                    ctx.arc(15, 0, 30, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Flash star
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(10, -10, 10, 20);
-                    ctx.fillRect(5, -5, 20, 10);
-                }
-                ctx.restore();
-                break;
-            case ObstacleType.DOG:
-                // More realistic dog - Facing Left (towards player)
-                ctx.fillStyle = this.dogVariant.color;
-                const s = this.dogVariant.scale;
-                // Body
-                ctx.beginPath();
-                ctx.roundRect(-25 * s, -20 * s, 50 * s, 30 * s, 15 * s);
-                ctx.fill();
-                // Head
-                ctx.beginPath();
-                ctx.arc(35 * s, -15 * s, 15 * s, 0, Math.PI * 2);
-                ctx.fill();
-                // Tail
-                ctx.beginPath();
-                ctx.moveTo(-25 * s, 0 * s);
-                ctx.quadraticCurveTo(-40 * s, 10 * s, -45 * s, 0 * s);
-                ctx.stroke();
-                // Legs
-                ctx.beginPath();
-                ctx.roundRect(-15 * s, 10 * s, 10 * s, 20 * s, 5 * s);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.roundRect(5 * s, 10 * s, 10 * s, 20 * s, 5 * s);
-                ctx.fill();
-                break;
-        }
-
-        ctx.restore();
     }
 }

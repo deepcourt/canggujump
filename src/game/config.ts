@@ -31,6 +31,7 @@ export const GAME_CONFIG = {
         PINK_FLUO: '#FF00FF', // Magenta
         SKIN: '#FFDBAC', // Peach
         TANNED: '#e1ad8e', // Tanned skin tone
+        POO: '#5d4037', // Brown for poo
         ACCENT: '#FFC107', // Amber
         FOCUS: '#ff6b6b', // A vibrant pinkish-red
     }
