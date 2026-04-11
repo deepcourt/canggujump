@@ -35,6 +35,16 @@ export const SoundSynth = {
             SoundSynth.musicElement = new Audio('audio/background-music.mp3');
             SoundSynth.musicElement.loop = true;
             SoundSynth.musicElement.volume = SoundSynth.musicVolume;
+            // "Unlock" the audio element by playing and pausing it on the first user interaction.
+            const promise = SoundSynth.musicElement.play();
+            if (promise !== undefined) {
+                promise.then(() => {
+                    SoundSynth.musicElement?.pause();
+                }).catch(error => {
+                    // Autoplay was prevented. This is fine, we'll try again on game start.
+                    console.log("Audio unlock failed, will retry on game start:", error);
+                });
+            }
         }
     },
 
