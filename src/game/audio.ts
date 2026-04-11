@@ -1,0 +1,324 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+interface ExtendedWindow extends Window {
+    webkitAudioContext?: typeof AudioContext;
+}
+
+// --- AUDIO SYNTHESIS ---
+
+export const SoundSynth = {
+    ctx: null as AudioContext | null,
+    bufferCache: {} as Record<string, AudioBuffer>,
+    immunityInterval: null as any,
+    
+    init: () => {
+        if (SoundSynth.ctx) return;
+        const Win = window as ExtendedWindow;
+        SoundSynth.ctx = new (window.AudioContext || Win.webkitAudioContext)();
+        
+        // Task 4.1 & 4.2: Pre-cache all sounds
+        SoundSynth.cacheSound('step', SoundSynth.createStepBuffer());
+        SoundSynth.cacheSound('jump', SoundSynth.createJumpBuffer());
+        SoundSynth.cacheSound('hit', SoundSynth.createHitBuffer());
+        SoundSynth.cacheSound('powerup', SoundSynth.createPowerupBuffer());
+        SoundSynth.cacheSound('click', SoundSynth.createClickBuffer());
+        SoundSynth.cacheSound('roar', SoundSynth.createNoiseBuffer(0.8));
+    },
+
+    cacheSound: (name: string, buffer: AudioBuffer) => {
+        SoundSynth.bufferCache[name] = buffer;
+    },
+
+    play: (name: string, volume: number = 0.1) => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx || !SoundSynth.bufferCache[name]) return;
+        
+        if (ctx.state === 'suspended') ctx.resume();
+        
+        const source = ctx.createBufferSource();
+        source.buffer = SoundSynth.bufferCache[name];
+        const gain = ctx.createGain();
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.start();
+    },
+
+    createNoiseBuffer: (duration: number): AudioBuffer => {
+        const ctx = SoundSynth.ctx!;
+        const bufferSize = ctx.sampleRate * duration;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+    },
+
+    createStepBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.05;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 100);
+        }
+        return buffer;
+    },
+
+    createJumpBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.15;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const freq = 150 + (600 - 150) * (t / duration);
+            data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-t * 10) * 0.5;
+        }
+        return buffer;
+    },
+
+    createHitBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.3;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const noise = Math.random() * 2 - 1;
+            const freq = 100 * Math.exp(-t * 5);
+            data[i] = (noise + Math.sin(2 * Math.PI * freq * t)) * Math.exp(-t * 8) * 0.5;
+        }
+        return buffer;
+    },
+
+    createPowerupBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.4;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const freq = 440 * Math.pow(2, Math.floor(t * 10) / 12); // Arpeggio
+            data[i] = (t % 0.05 < 0.025 ? 1 : -1) * Math.exp(-t * 3) * 0.3;
+        }
+        return buffer;
+    },
+
+    createClickBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.05;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            data[i] = Math.sin(2 * Math.PI * 1000 * t) * Math.exp(-t * 200);
+        }
+        return buffer;
+    },
+
+    playJump: () => SoundSynth.play('jump', 0.15),
+    playStep: () => SoundSynth.play('step', 0.05),
+    playHit: () => SoundSynth.play('hit', 0.2),
+    playPowerup: () => SoundSynth.play('powerup', 0.2),
+    playClick: () => SoundSynth.play('click', 0.1),
+    playRoar: () => SoundSynth.play('roar', 0.3),
+
+    playHonk: () => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        
+        const playBeep = (start: number, duration: number) => {
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc1.type = 'triangle';
+            osc2.type = 'triangle';
+            osc1.frequency.setValueAtTime(440, start);
+            osc2.frequency.setValueAtTime(445, start);
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(0.1, start + 0.02);
+            gain.gain.linearRampToValueAtTime(0.1, start + duration - 0.02);
+            gain.gain.linearRampToValueAtTime(0, start + duration);
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+            osc1.start(start);
+            osc2.start(start);
+            osc1.stop(start + duration);
+            osc2.stop(start + duration);
+        };
+
+        playBeep(t, 0.1); // beep
+        playBeep(t + 0.15, 0.1); // beep
+        playBeep(t + 0.3, 0.5); // beeeeeeep
+    },
+
+    playBark: (scale: number = 1.0) => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        
+        // Pitch is inversely proportional to scale (smaller dog = higher pitch)
+        const basePitch = 180 / scale;
+        
+        const bark = (start: number, pitch: number) => {
+            // Main body of the bark (Sawtooth + Square for richness)
+            const osc = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc2.type = 'square';
+            
+            osc.frequency.setValueAtTime(pitch, start);
+            osc.frequency.exponentialRampToValueAtTime(pitch * 0.6, start + 0.08);
+            
+            osc2.frequency.setValueAtTime(pitch * 0.5, start);
+            osc2.frequency.exponentialRampToValueAtTime(pitch * 0.3, start + 0.08);
+            
+            // Noise component for "breathiness" and "grit"
+            const noise = ctx.createBufferSource();
+            noise.buffer = SoundSynth.createNoiseBuffer(0.12);
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.setValueAtTime(pitch * 1.5, start);
+            const noiseGain = ctx.createGain();
+            
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(0.2, start + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.01, start + 0.12);
+
+            noiseGain.gain.setValueAtTime(0.1, start);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, start + 0.1);
+            
+            osc.connect(gain);
+            osc2.connect(gain);
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            
+            gain.connect(ctx.destination);
+            noiseGain.connect(ctx.destination);
+            
+            osc.start(start);
+            osc2.start(start);
+            noise.start(start);
+            osc.stop(start + 0.12);
+            osc2.stop(start + 0.12);
+        };
+
+        bark(t, basePitch);
+        bark(t + 0.1, basePitch * 0.9);
+    },
+
+    playPadelWhoosh: () => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.1, t + 0.1);
+        gain.gain.linearRampToValueAtTime(0, t + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    },
+
+    playTruckEngine: () => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, t);
+        // Drone hum modulation
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.frequency.value = 30;
+        lfoGain.gain.value = 20;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.08, t + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        lfo.start(t);
+        osc.start(t);
+        return { osc, gain, lfo };
+    },
+
+    startImmunityMusic: () => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx || SoundSynth.immunityInterval) return;
+        
+        const playNote = (freq: number, start: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, start);
+            gain.gain.setValueAtTime(0.05, start);
+            gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration);
+        };
+
+        const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        let index = 0;
+        
+        SoundSynth.immunityInterval = setInterval(() => {
+            const t = ctx.currentTime;
+            playNote(melody[index % melody.length], t, 0.1);
+            index++;
+        }, 120);
+    },
+
+    stopImmunityMusic: () => {
+        if (SoundSynth.immunityInterval) {
+            clearInterval(SoundSynth.immunityInterval);
+            SoundSynth.immunityInterval = null;
+        }
+    },
+
+    playRoar: () => {
+        const ctx = SoundSynth.ctx;
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        
+        const playNote = (freq: number, start: number, duration: number, slide: boolean = false) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, start);
+            if (slide) {
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.5, start + duration);
+            }
+            gain.gain.setValueAtTime(0.1, start);
+            gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration);
+        };
+
+        // Mario-style Game Over descending melody
+        playNote(392.00, t, 0.15); // G4
+        playNote(329.63, t + 0.2, 0.15); // E4
+        playNote(261.63, t + 0.4, 0.15); // C4
+        playNote(196.00, t + 0.6, 0.4, true); // G3 with slide
+    }
+};
