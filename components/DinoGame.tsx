@@ -4,6 +4,7 @@
 */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { GAME_CONFIG, ObstacleType, GAME_OVER_MESSAGES } from '../game/config';
 
 // --- TYPES & INTERFACES ---
 
@@ -31,19 +32,6 @@ interface GameObject {
     width: number;
     height: number;
     color?: string;
-}
-
-enum ObstacleType {
-    SCOOTER = 'SCOOTER',
-    TRIPLE_SCOOTER = 'TRIPLE_SCOOTER',
-    DOG_POO = 'DOG_POO',
-    POTHOLE = 'POTHOLE',
-    BIRD = 'BIRD',
-    DOG = 'DOG',
-    CANANG_SARI = 'CANANG_SARI',
-    PROTEIN_SHAKE = 'PROTEIN_SHAKE',
-    PADEL_BALL = 'PADEL_BALL',
-    INFLUENCER = 'INFLUENCER'
 }
 
 interface GameEngineState {
@@ -100,42 +88,6 @@ interface PlayerEntity {
 }
 
 // --- CONSTANTS ---
-
-const GAME_CONFIG = {
-    CANVAS_WIDTH: 800,
-    CANVAS_HEIGHT: 300,
-    GROUND_Y: 242,
-    GRAVITY: 3500, // Slightly lower gravity for easier jumps
-    JUMP_FORCE: 950,
-    INITIAL_SPEED: 350, // Slower initial speed
-    MAX_SPEED: 1000, // Lower max speed
-    SPEED_INCREMENT: 8,
-    DINO_START_X: 50,
-    DINO_GROUND_Y: 200,
-    VISION_FPS: 30,
-    COLORS: {
-        PRIMARY: '#535353',
-        ACCENT: '#ff5252',
-        FOCUS: '#F59E0B',
-        WHITE: '#ffffff',
-        POO: '#8B4513',
-        SCOOTER: '#FACC15', // Yellow Vespa style
-        HELMET: '#22C55E',
-        SKIN: '#FFDBAC',
-        POTHOLE: '#333333',
-        CANANG: '#4ADE80',
-        DOG: '#A16207',
-        BIRD: '#333333',
-        PROTEIN: '#EF4444',
-        PADEL: '#99FF00',
-        HAY: '#FDE047',
-        PINK_FLUO: '#FF00FF',
-        SKY: '#BAE6FD', // Light blue sky
-        OCEAN: '#0EA5E9', // Deep blue ocean
-        SAND: '#fef3c7', // Clear warm sand (lighter beige)
-        TANNED: '#C68642', // Tanned skin
-    }
-};
 
 // --- BACKGROUND CLASSES ---
 
@@ -1462,19 +1414,6 @@ const createBodyBuilder = (): PlayerEntity => ({
     }
 });
 
-
-const GAME_OVER_MESSAGES: Record<string, string> = {
-    [ObstacleType.SCOOTER]: "Learned about traffic the hard way.",
-    [ObstacleType.TRIPLE_SCOOTER]: "Learned about traffic the hard way.",
-    [ObstacleType.DOG]: "Tried to pet the dog. It didn't go well.",
-    [ObstacleType.CANANG_SARI]: "Disrespected the offerings. Bad karma.",
-    [ObstacleType.PADEL_BALL]: "Should have worn a helmet. Padel is serious business.",
-    [ObstacleType.POTHOLE]: "The road giveth, and the road taketh away.",
-    [ObstacleType.DOG_POO]: "You've had a crappy day.",
-    [ObstacleType.BIRD]: "Got swooped.",
-    [ObstacleType.INFLUENCER]: "Ruined their perfect shot. Now everyone's mad.",
-    [ObstacleType.PROTEIN_SHAKE]: "Wait... how did you die to a protein shake?", // Should not happen
-};
 
 const DinoGame: React.FC = () => {
     // --- REFS ---
