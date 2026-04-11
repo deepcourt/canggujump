@@ -1318,7 +1318,6 @@ const createBodyBuilder = (): PlayerEntity => ({
             ctx.beginPath();
             ctx.roundRect(ix + (22/65)*w, iy - (15/80)*h, (24/65)*w, (15/80)*h, [6*sizeMult, 6*sizeMult, 2*sizeMult, 2*sizeMult]);
             ctx.fill();
-            ctx.stroke();
         } else {
             // Ray-Ban Style Sunglasses
             ctx.fillStyle = '#111';
@@ -1477,7 +1476,7 @@ const DinoGame: React.FC = () => {
         prevTime: 0,
         smoothedVelocity: 0,
         peakVelocity: 0,
-        JUMP_VELOCITY_THRESHOLD: 1.2,
+        JUMP_VELOCITY_THRESHOLD: 0.8,
         lastPredictionTime: 0
     });
 
