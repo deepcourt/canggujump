@@ -50,6 +50,7 @@ export interface GameEngineState {
     shakeTimer: number;
     lastHitObstacleType: ObstacleType | null;
     explosionImages: HTMLImageElement[];
+    fartImages: HTMLImageElement[];
 }
 
 export interface GameEngineCallbacks {
@@ -90,7 +91,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         bgScrollX: 0,
         shakeTimer: 0,
         lastHitObstacleType: null,
-        explosionImages: []
+        explosionImages: [],
+        fartImages: []
     };
 
     // Pre-load explosion images
@@ -98,6 +100,12 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(explosionPaths).then(imgs => {
         state.explosionImages = imgs;
     }).catch(err => console.error("Failed to load explosion images:", err));
+
+    // Pre-load fart images
+    const fartPaths = Array.from({ length: 9 }, (_, i) => `./images/fart0${i}.png`);
+    loadImages(fartPaths).then(imgs => {
+        state.fartImages = imgs;
+    }).catch(err => console.error("Failed to load fart images:", err));
 
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
@@ -309,8 +317,13 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                             state.lastHitObstacleType = obs.type;
                             gameOver();
                         } else {
-                            // --- TRIGGER EXPLOSION ON LIFE LOSS (non-fatal) ---
-                            if (state.explosionImages.length > 0) {
+                            if (obs.type === ObstacleType.DOG_POO && state.fartImages.length > 0) {
+                                const randomIndex = Math.floor(Math.random() * state.fartImages.length);
+                                const fartImg = state.fartImages[randomIndex];
+                                const p = getFromPool(state.particlePool, () => new Particle());
+                                p.spawn(state.player.x, state.player.y + state.player.height / 2, '#fff', 'EXPLOSION', fartImg);
+                            } else if (state.explosionImages.length > 0) {
+                                // --- TRIGGER EXPLOSION ON LIFE LOSS (non-fatal) ---
                                 const randomIndex = Math.floor(Math.random() * state.explosionImages.length);
                                 const explosionImg = state.explosionImages[randomIndex];
                                 const p = getFromPool(state.particlePool, () => new Particle());
