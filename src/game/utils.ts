@@ -34,19 +34,3 @@ export const loadImages = (paths: string[]): Promise<HTMLImageElement[]> => {
         })
     );
 };
-
-/**
- * Loads a set of images and returns a promise that resolves when all are loaded.
- */
-export const loadImages = (paths: string[]): Promise<HTMLImageElement[]> => {
-    return Promise.all(
-        paths.map(path => {
-            return new Promise<HTMLImageElement>((resolve, reject) => {
-                const img = new Image();
-                img.src = path;
-                img.onload = () => resolve(img);
-                img.onerror = (err) => reject(err);
-            });
-        })
-    );
-};

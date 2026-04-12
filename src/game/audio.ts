@@ -148,7 +148,6 @@ export const SoundSynth = {
     playHit: () => SoundSynth.play('hit', 0.2),
     playPowerup: () => SoundSynth.play('powerup', 0.2),
     playClick: () => SoundSynth.play('click', 0.1),
-    playRoar: () => SoundSynth.play('roar', 0.3),
 
     setMuted: (isMuted: boolean) => {
         SoundSynth.muted = isMuted;
