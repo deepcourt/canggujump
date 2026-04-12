@@ -51,6 +51,7 @@ export interface GameEngineState {
     lastHitObstacleType: ObstacleType | null;
     explosionImages: HTMLImageElement[];
     fartImages: HTMLImageElement[];
+    dogImage: HTMLImageElement | null;
 }
 
 export interface GameEngineCallbacks {
@@ -92,7 +93,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         shakeTimer: 0,
         lastHitObstacleType: null,
         explosionImages: [],
-        fartImages: []
+        fartImages: [],
+        dogImage: null
     };
 
     // Pre-load explosion images
@@ -107,6 +109,11 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.fartImages = imgs;
     }).catch(err => console.error("Failed to load fart images:", err));
 
+    // Pre-load dog image
+    loadImages(['./images/animal-dog.png']).then(([img]) => {
+        state.dogImage = img;
+    }).catch(err => console.error("Failed to load dog image:", err));
+
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
 
@@ -120,6 +127,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                 const config = getRandomObstacleConfig();
                 const obstacle = getFromPool(state.obstaclePool, () => new Obstacle());
                 obstacle.spawn(nextX, config);
+                if (obstacle.type === ObstacleType.DOG) {
+                    obstacle.dogImage = state.dogImage;
+                }
                 nextX += obstacle.width + (10 + Math.random() * 30);
             }
             state.spawnTimer = 1.5 + (count * 0.5) + Math.random() * 1.5;
