@@ -53,7 +53,7 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         type: ObstacleType.SCOOTER,
         width: 70,
         height: 55,
-        y: GAME_CONFIG.GROUND_Y - 55,
+        y: GAME_CONFIG.GROUND_Y - 55 - 2, // Raise slightly to sit on top of grass
         weight: 10,
         customSpawn: (obs) => {
             obs.hasSurfboard = Math.random() > 0.5;
@@ -63,7 +63,7 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         type: ObstacleType.TRIPLE_SCOOTER,
         width: 85,
         height: 55,
-        y: GAME_CONFIG.GROUND_Y - 55,
+        y: GAME_CONFIG.GROUND_Y - 55 - 2, // Raise slightly to sit on top of grass
         weight: 9,
     },
     {
@@ -97,7 +97,7 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         type: ObstacleType.INFLUENCER,
         width: 40,
         height: 65,
-        y: GAME_CONFIG.GROUND_Y - 65,
+        y: GAME_CONFIG.GROUND_Y - 65 - 2, // Raise slightly to sit on top of grass
         weight: 7,
     },
     {
