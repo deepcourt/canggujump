@@ -94,7 +94,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     };
 
     // Pre-load explosion images
-    const explosionPaths = Array.from({ length: 9 }, (_, i) => `/images/explosion0${i}.png`);
+    const explosionPaths = Array.from({ length: 9 }, (_, i) => `images/explosion0${i}.png`);
     loadImages(explosionPaths).then(imgs => {
         state.explosionImages = imgs;
     }).catch(err => console.error("Failed to load explosion images:", err));
