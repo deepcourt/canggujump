@@ -59,7 +59,6 @@ export interface GameEngineState {
     highScore: number;
     playerName: string;
     bgType: 'OCEAN' | 'RICE_FIELD';
-    bgTimer: number;
     bgScrollX: number;
     shakeTimer: number;
     lastHitObstacleType: ObstacleType | null;
@@ -119,8 +118,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         hasStarted: false,
         highScore: 0,
         playerName: 'LEGEND',
-        bgType: 'OCEAN',
-        bgTimer: 0,
+        bgType: 'RICE_FIELD',
         bgScrollX: 0,
         shakeTimer: 0,
         lastHitObstacleType: null,
@@ -338,10 +336,11 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
         ctx.fill();
 
-        // Update difficulty phase based on score
+        // Update difficulty phase and scenery based on score
         const currentScore = Math.floor(state.score / 10);
         if (state.difficultyPhase === 1 && currentScore >= DIFFICULTY_THRESHOLDS.PHASE_2) {
             state.difficultyPhase = 2;
+            state.bgType = 'OCEAN';
         }
         if (state.difficultyPhase === 2 && currentScore >= DIFFICULTY_THRESHOLDS.PHASE_3) {
             state.difficultyPhase = 3;
@@ -371,15 +370,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         spawnCloud(dt);
         state.cloudPool.forEach(c => c.active && (c.update(dt, state.gameSpeed), c.draw(ctx)));
 
-        state.bgTimer += dt;
         state.bgScrollX = (state.bgScrollX + state.gameSpeed * 0.2 * dt) % 1000;
-        if (state.bgTimer > 15) {
-            const scenery = getFromPool(state.sceneryPool, () => new SceneryElement());
-            scenery.spawn(GAME_CONFIG.CANVAS_WIDTH + 300, 'BIG_VILLA');
-            state.bgType = state.bgType === 'OCEAN' ? 'RICE_FIELD' : 'OCEAN';
-            state.bgTimer = 0;
-            state.scenerySpawnTimer = 2.5;
-        }
 
         if (state.bgType === 'OCEAN') {
             ctx.fillStyle = GAME_CONFIG.COLORS.OCEAN;
@@ -628,9 +619,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.knockOffCombo = 0;
         state.jumpCombo = 0;
         state.difficultyPhase = 1;
-        state.bgTimer = 0;
         state.bgScrollX = 0;
-        state.bgType = 'OCEAN';
+        state.bgType = 'RICE_FIELD';
         state.lastHitObstacleType = null;
         state.player.reset();
         state.lastTime = 0;

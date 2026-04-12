@@ -8,7 +8,7 @@ import type { ObstacleConfig } from './obstacles.config';
 
 export const DIFFICULTY_THRESHOLDS = {
     PHASE_2: 300,
-    PHASE_3: 1200,
+    PHASE_3: 800,
 };
 
 // All obstacle definitions now live here, organized by the phase they are introduced in.
