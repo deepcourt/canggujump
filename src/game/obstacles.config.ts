@@ -67,8 +67,14 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         weight: 10,
         customSpawn: (obs) => {
             obs.hasSurfboard = Math.random() > 0.5;
-            const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
-            obs.helmetColor = colors[Math.floor(Math.random() * colors.length)];
+            if (obs.hasSurfboard) {
+                // Surfer scooters get random helmet colors
+                const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
+                obs.helmetColor = colors[Math.floor(Math.random() * colors.length)];
+            } else {
+                // The "Bike bike!" scooter is a Grab driver, always green
+                obs.helmetColor = '#22c55e';
+            }
         }
     },
     {
