@@ -16,6 +16,7 @@ export const SoundSynth = {
     muted: false,
     musicElement: null as HTMLAudioElement | null,
     barkElement: null as HTMLAudioElement | null,
+    shutterElement: null as HTMLAudioElement | null,
     musicVolume: 0.3,
     
     init: () => {
@@ -61,6 +62,11 @@ export const SoundSynth = {
                     console.log("Bark audio unlock failed:", error);
                 });
             }
+        }
+        
+        if (!SoundSynth.shutterElement) {
+            SoundSynth.shutterElement = new Audio('audio/camera-shutter-and-flash.mp3');
+            SoundSynth.shutterElement.volume = 0.6;
         }
     },
 
@@ -236,6 +242,12 @@ export const SoundSynth = {
         if (SoundSynth.muted || !SoundSynth.barkElement) return;
         SoundSynth.barkElement.currentTime = 0;
         SoundSynth.barkElement.play().catch(e => console.error("Bark sound play failed:", e));
+    },
+
+    playCameraShutter: () => {
+        if (SoundSynth.muted || !SoundSynth.shutterElement) return;
+        SoundSynth.shutterElement.currentTime = 0;
+        SoundSynth.shutterElement.play().catch(e => console.error("Shutter sound play failed:", e));
     },
 
     playPadelWhoosh: () => {

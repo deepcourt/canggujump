@@ -100,6 +100,7 @@ export class Obstacle {
                 if (this.x < 600 && this.x > 200 && Math.random() < 0.01) {
                     this.isPosing = true;
                     this.selfieTimer = 1.0 + Math.random() * 1.0;
+                    SoundSynth.playCameraShutter();
                 }
             }
         }
