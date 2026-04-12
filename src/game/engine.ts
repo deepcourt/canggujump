@@ -279,6 +279,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                 obs.update(dt, state.gameSpeed);
                 obs.draw(ctx);
                 if (state.player.x < obs.x + obs.width - padding && state.player.x + state.player.width > obs.x + padding && state.player.y < obs.y + obs.height && state.player.y + state.player.height >= obs.y && !obs.isCrashed) {
+                    const isStompable = obs.type === ObstacleType.SCOOTER || obs.type === ObstacleType.TRIPLE_SCOOTER || obs.type === ObstacleType.INFLUENCER;
+                    const isStomping = state.player.dy > 0 && (state.player.y + state.player.height) < (obs.y + 20);
+
                     if (obs.type === ObstacleType.PROTEIN_SHAKE) {
                         obs.active = false;
                         state.player.powerUpTimer = 7;
@@ -290,6 +293,12 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                         obs.crashVX = 500 + Math.random() * 300;
                         obs.crashVY = -500 - Math.random() * 300;
                         state.shakeTimer = 0.1;
+                    } else if (isStompable && isStomping) {
+                        obs.isCrashed = true;
+                        obs.crashVX = 200 + Math.random() * 100;
+                        obs.crashVY = -300 - Math.random() * 200;
+                        state.player.dy = -GAME_CONFIG.JUMP_FORCE * 0.6; // Stomp bounce
+                        SoundSynth.playHit();
                     } else if (state.player.hitTimer <= 0) {
                         obs.active = false;
                         state.player.lives -= 1;

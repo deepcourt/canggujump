@@ -81,17 +81,6 @@ export const createBodyBuilder = (): PlayerEntity => ({
         const ix = Math.floor(this.x);
         const iy = Math.floor(this.y - (h - this.height));
 
-        // Hit Animation (Flashing red) - Rounded and smooth
-        if (this.hitTimer > 0 && Math.floor(this.hitTimer * 10) % 2 === 0) {
-            ctx.save();
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = '#ff0000';
-            ctx.beginPath();
-            ctx.roundRect(ix - 10, iy - 10, w + 20, h + 20, 20);
-            ctx.fill();
-            ctx.restore();
-        }
-
         // Immunity Glow
         if (this.powerUpTimer > 0) {
             ctx.shadowBlur = 20;
