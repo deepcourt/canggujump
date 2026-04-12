@@ -295,6 +295,15 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                         state.player.lives -= 1;
                         state.player.hitTimer = 1.0;
                         state.shakeTimer = 0.3;
+
+                        // --- TRIGGER EXPLOSION ON LIFE LOSS ---
+                        if (state.explosionImages.length > 0) {
+                            const randomIndex = Math.floor(Math.random() * state.explosionImages.length);
+                            const explosionImg = state.explosionImages[randomIndex];
+                            const p = getFromPool(state.particlePool, () => new Particle());
+                            p.spawn(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2, '#fff', 'EXPLOSION', explosionImg);
+                        }
+
                         if (state.player.lives <= 0) {
                             state.lastHitObstacleType = obs.type;
                             gameOver();
