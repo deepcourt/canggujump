@@ -29,6 +29,8 @@ export class Obstacle {
     // Padel Ball logic
     padelVY: number = 0;
     padelIsBouncing: boolean = false;
+    // Pothole logic
+    potholeDebris: { angle: number, distance: number, size: number, color: string }[] = [];
     // Influencer logic
     selfieTimer: number = 0;
     isPosing: boolean = false;
@@ -48,6 +50,7 @@ export class Obstacle {
         this.smokeTimer = 0;
         this.padelIsBouncing = false;
         this.padelVY = 0;
+        this.potholeDebris = [];
 
         this.type = config.type;
         this.width = config.width;
@@ -141,30 +144,35 @@ export class Obstacle {
         }
 
         if (this.type === ObstacleType.SCOOTER || this.type === ObstacleType.TRIPLE_SCOOTER) {
-            // Vespa/Scoopy style - Facing Left
-            if (this.type === ObstacleType.TRIPLE_SCOOTER) {
-                ctx.fillStyle = '#FB923C'; // Orange for triple
-            } else if (this.hasSurfboard) {
-                ctx.fillStyle = '#3b82f6'; // Blue for surfer
-            } else {
-                ctx.fillStyle = GAME_CONFIG.COLORS.SCOOTER; // Yellow for single
-            }
-            
-            // Body curve
-            ctx.beginPath();
-            ctx.roundRect(ix + 15, iy + 25, 45, 20, 10);
-            ctx.fill();
-            // Front shield
-            ctx.fillRect(ix + 5, iy + 15, 15, 30);
-            // Handlebar
-            ctx.fillStyle = '#333';
-            ctx.fillRect(ix + 2, iy + 12, 12, 4);
+            // Vespa/Scoopy style - Facing Left with more realistic curves
+            const bodyColor = this.type === ObstacleType.TRIPLE_SCOOTER ? '#FB923C' : (this.hasSurfboard ? '#3b82f6' : GAME_CONFIG.COLORS.SCOOTER);
             
             // Wheels
             ctx.fillStyle = '#222';
             ctx.beginPath();
             ctx.arc(ix + 15, iy + 45, 10, 0, Math.PI * 2);
-            ctx.arc(ix + 50, iy + 45, 10, 0, Math.PI * 2);
+            ctx.arc(ix + 55, iy + 45, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Scooter Body
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.moveTo(ix + 15, iy + 45); // Start at front wheel
+            ctx.quadraticCurveTo(ix + 5, iy + 20, ix + 20, iy + 10); // Rounded front shield
+            ctx.lineTo(ix + 35, iy + 10); // Top part
+            ctx.lineTo(ix + 40, iy + 20); // Down to seat
+            ctx.quadraticCurveTo(ix + 50, iy + 45, ix + 70, iy + 40); // Rear fender
+            ctx.lineTo(ix + 55, iy + 45); // To back wheel
+            ctx.closePath();
+            ctx.fill();
+
+            // Handlebar & Seat
+            ctx.fillStyle = '#333';
+            ctx.fillRect(ix + 18, iy + 8, 4, 8); // Handlebar stem
+            ctx.fillRect(ix + 15, iy + 8, 10, 3); // Handlebar
+            ctx.fillStyle = '#5a4a42';
+            ctx.beginPath();
+            ctx.roundRect(ix + 35, iy + 15, 20, 8, 3);
             ctx.fill();
 
             // Surfboard variant
@@ -313,18 +321,33 @@ export class Obstacle {
             // Spiritual Glow
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#ff5252';
-            
+
+            // Green leaf basket
             ctx.fillStyle = GAME_CONFIG.COLORS.CANANG;
             ctx.beginPath();
-            ctx.roundRect(ix, iy, 30, 15, 3); // Basket
+            ctx.moveTo(ix, iy);
+            ctx.lineTo(ix + 30, iy);
+            ctx.lineTo(ix + 25, iy + 15);
+            ctx.lineTo(ix + 5, iy + 15);
+            ctx.closePath();
             ctx.fill();
-            
+
             ctx.shadowBlur = 0;
+
+            // Leaf details
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(ix + 15, iy);
+            ctx.lineTo(ix + 15, iy + 15);
+            ctx.moveTo(ix + 5, iy);
+            ctx.lineTo(ix + 25, iy + 15);
+            ctx.stroke();
 
             // Flowers (More detailed)
             ctx.fillStyle = '#ff5252'; ctx.beginPath(); ctx.arc(ix + 8, iy + 5, 4, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#FACC15'; ctx.beginPath(); ctx.arc(ix + 22, iy + 5, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#4ADE80'; ctx.beginPath(); ctx.arc(ix + 15, iy + 10, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ix + 15, iy + 10, 4, 0, Math.PI * 2); ctx.fill();
 
             // Incense Smoke (Fluid)
             const smokeY = iy - 10 - (this.smokeTimer % 1) * 30;
@@ -371,10 +394,29 @@ export class Obstacle {
             ctx.lineTo(ix + 15, arrowY + 15);
             ctx.fill();
         } else if (this.type === ObstacleType.POTHOLE) {
-            ctx.fillStyle = GAME_CONFIG.COLORS.POTHOLE;
+            const centerX = ix + this.width / 2;
+            // Main hole - dark
+            ctx.fillStyle = '#2a2a2a';
             ctx.beginPath();
-            ctx.ellipse(ix + this.width / 2, iy, this.width / 2, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(centerX, iy, this.width / 2, 8, 0, 0, Math.PI * 2);
             ctx.fill();
+
+            // Inner shadow for depth
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(centerX, iy, this.width / 2.2, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Debris/stones around the edge
+            this.potholeDebris.forEach(debris => {
+                const x = centerX + Math.cos(debris.angle) * debris.distance;
+                const y = iy + Math.sin(debris.angle) * 8; // Match ellipse shape
+                ctx.fillStyle = debris.color;
+                ctx.beginPath();
+                ctx.arc(x, y, debris.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
         } else { // DOG_POO
             ctx.fillStyle = GAME_CONFIG.COLORS.POO;
             ctx.fillRect(ix, iy + 5, 25, 7);

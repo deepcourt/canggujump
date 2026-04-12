@@ -39,6 +39,16 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         weight: 14,
         customSpawn: (obs) => {
             obs.width = Math.random() > 0.6 ? 80 : 40;
+            obs.potholeDebris = [];
+            const numDebris = 5 + Math.floor(Math.random() * 5);
+            for (let i = 0; i < numDebris; i++) {
+                obs.potholeDebris.push({
+                    angle: Math.random() * Math.PI * 2,
+                    distance: (obs.width / 2) * (0.9 + Math.random() * 0.2),
+                    size: 2 + Math.random() * 3,
+                    color: `rgb(100,100,100, ${0.5 + Math.random() * 0.5})`
+                });
+            }
         }
     },
     {

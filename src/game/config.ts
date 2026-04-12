@@ -22,7 +22,7 @@ export const GAME_CONFIG = {
         SAND: '#DEB887', // Burly wood
         POTHOLE: '#333',
         DOG: '#8B4513', // Saddle brown
-        CANANG: '#FFC0CB', // Pink
+        CANANG: '#22c55e', // Leaf green for offerings
         PROTEIN: '#AFEEEE', // Pale turquoise
         PADEL: '#90EE90', // Light green
         BIRD: '#444',
