@@ -65,6 +65,9 @@ export interface GameEngineState {
     grassPool: Decoration[];
     grassSpawnTimer: number;
     grassImages: HTMLImageElement[];
+    mountainPool: Decoration[];
+    mountainSpawnTimer: number;
+    mountainImage: HTMLImageElement | null;
 }
 
 export interface GameEngineCallbacks {
@@ -118,7 +121,10 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         cloudImages: [],
         grassPool: Array.from({ length: 20 }, () => new Decoration()),
         grassSpawnTimer: 0.5,
-        grassImages: []
+        grassImages: [],
+        mountainPool: Array.from({ length: 5 }, () => new Decoration()),
+        mountainSpawnTimer: 8,
+        mountainImage: null
     };
 
     // Pre-load explosion images
@@ -160,6 +166,11 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(grassPaths).then(imgs => {
         state.grassImages = imgs;
     }).catch(err => console.error("Failed to load grass images:", err));
+
+    // Pre-load mountain image
+    loadImages(['./images/pointy_mountains.png']).then(([img]) => {
+        state.mountainImage = img;
+    }).catch(err => console.error("Failed to load mountain image:", err));
 
 
     let canvas: HTMLCanvasElement | null = null;
@@ -233,8 +244,21 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             const width = randomImage.width * scale;
             const height = randomImage.height * scale;
             const speedMultiplier = 0.1 + Math.random() * 0.2;
-            cloud.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, speedMultiplier);
+            cloud.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, speedMultiplier, 'CLOUD');
             state.cloudSpawnTimer = 4 + Math.random() * 5; // Spawn a new cloud every 4-9 seconds
+        }
+    };
+
+    const spawnMountain = (dt: number) => {
+        state.mountainSpawnTimer -= dt;
+        if (state.mountainSpawnTimer <= 0 && state.mountainImage && state.bgType === 'OCEAN') {
+            const mountain = getFromPool(state.mountainPool, () => new Decoration());
+            const height = 100 + Math.random() * 50;
+            const width = (height / state.mountainImage.height) * state.mountainImage.width;
+            const y = GAME_CONFIG.GROUND_Y - height + 20; // Sit behind the ocean line
+            const speedMultiplier = 0.08; // Very slow for parallax
+            mountain.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, state.mountainImage, speedMultiplier, 'MOUNTAIN');
+            state.mountainSpawnTimer = 20 + Math.random() * 15; // Spawn a new mountain every 20-35 seconds
         }
     };
 
@@ -246,7 +270,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             const width = 20 + Math.random() * 15;
             const height = (width / randomImage.width) * randomImage.height;
             const y = GAME_CONFIG.GROUND_Y - height + 2;
-            grass.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, 1); // Moves with the ground
+            grass.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, 1, 'GRASS'); // Moves with the ground
             state.grassSpawnTimer = 0.8 + Math.random() * 1.2; // Spawn grass fairly often
         }
     };
@@ -302,6 +326,26 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         ctx.beginPath();
         ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
         ctx.fill();
+
+        spawnMountain(dt);
+        state.mountainPool.forEach(m => {
+            if (m.active) {
+                m.update(dt, state.gameSpeed);
+                m.draw(ctx);
+                // Volcano smoke effect
+                if (m.type === 'MOUNTAIN' && m.smokeTimer !== undefined) {
+                    m.smokeTimer -= dt;
+                    if (m.smokeTimer <= 0) {
+                        const p = getFromPool(state.particlePool, () => new Particle());
+                        // Peak of the mountain
+                        const smokeX = m.x + m.width * 0.45;
+                        const smokeY = m.y + m.height * 0.1;
+                        p.spawn(smokeX, smokeY, '#888', 'DUST');
+                        m.smokeTimer = 1.5 + Math.random() * 2;
+                    }
+                }
+            }
+        });
 
         spawnCloud(dt);
         state.cloudPool.forEach(c => c.active && (c.update(dt, state.gameSpeed), c.draw(ctx)));
@@ -483,6 +527,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.springPool.forEach(p => p.active = false);
         state.cloudPool.forEach(p => p.active = false);
         state.grassPool.forEach(p => p.active = false);
+        state.mountainPool.forEach(p => p.active = false);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 30 + Math.random() * 60) getFromPool(state.groundPool, () => new GroundDetail()).spawn(x);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 150 + Math.random() * 200) getFromPool(state.sceneryPool, () => new SceneryElement()).spawn(x, 'PALM');
         state.score = 0;
@@ -494,6 +539,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.springSpawnTimer = 5;
         state.cloudSpawnTimer = 2;
         state.grassSpawnTimer = 0.5;
+        state.mountainSpawnTimer = 8;
         state.bgTimer = 0;
         state.bgScrollX = 0;
         state.bgType = 'OCEAN';
