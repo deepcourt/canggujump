@@ -15,6 +15,7 @@ export const SoundSynth = {
     immunityInterval: null as any,
     muted: false,
     musicElement: null as HTMLAudioElement | null,
+    barkElement: null as HTMLAudioElement | null,
     musicVolume: 0.3,
     
     init: () => {
@@ -44,6 +45,20 @@ export const SoundSynth = {
                 }).catch(error => {
                     // Autoplay was prevented. This is fine, we'll try again on game start.
                     console.log("Audio unlock failed, will retry on game start:", error);
+                });
+            }
+        }
+
+        if (!SoundSynth.barkElement) {
+            SoundSynth.barkElement = new Audio('audio/dog_barking_mono.wav');
+            SoundSynth.barkElement.volume = 0.5;
+            const promise = SoundSynth.barkElement.play();
+            if (promise !== undefined) {
+                promise.then(() => {
+                    SoundSynth.barkElement?.pause();
+                    SoundSynth.barkElement!.currentTime = 0;
+                }).catch(error => {
+                    console.log("Bark audio unlock failed:", error);
                 });
             }
         }
@@ -217,62 +232,10 @@ export const SoundSynth = {
         playBeep(t + 0.3, 0.5); // beeeeeeep
     },
 
-    playBark: (scale: number = 1.0) => {
-        if (SoundSynth.muted) return;
-        const ctx = SoundSynth.ctx;
-        if (!ctx) return;
-        const t = ctx.currentTime;
-        
-        // Pitch is inversely proportional to scale (smaller dog = higher pitch)
-        const basePitch = 180 / scale;
-        
-        const bark = (start: number, pitch: number) => {
-            // Main body of the bark (Sawtooth + Square for richness)
-            const osc = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.type = 'sawtooth';
-            osc2.type = 'square';
-            
-            osc.frequency.setValueAtTime(pitch, start);
-            osc.frequency.exponentialRampToValueAtTime(pitch * 0.6, start + 0.08);
-            
-            osc2.frequency.setValueAtTime(pitch * 0.5, start);
-            osc2.frequency.exponentialRampToValueAtTime(pitch * 0.3, start + 0.08);
-            
-            // Noise component for "breathiness" and "grit"
-            const noise = ctx.createBufferSource();
-            noise.buffer = SoundSynth.createNoiseBuffer(0.12);
-            const noiseFilter = ctx.createBiquadFilter();
-            noiseFilter.type = 'bandpass';
-            noiseFilter.frequency.setValueAtTime(pitch * 1.5, start);
-            const noiseGain = ctx.createGain();
-            
-            gain.gain.setValueAtTime(0, start);
-            gain.gain.linearRampToValueAtTime(0.2, start + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.01, start + 0.12);
-
-            noiseGain.gain.setValueAtTime(0.1, start);
-            noiseGain.gain.exponentialRampToValueAtTime(0.01, start + 0.1);
-            
-            osc.connect(gain);
-            osc2.connect(gain);
-            noise.connect(noiseFilter);
-            noiseFilter.connect(noiseGain);
-            
-            gain.connect(ctx.destination);
-            noiseGain.connect(ctx.destination);
-            
-            osc.start(start);
-            osc2.start(start);
-            noise.start(start);
-            osc.stop(start + 0.12);
-            osc2.stop(start + 0.12);
-        };
-
-        bark(t, basePitch);
-        bark(t + 0.1, basePitch * 0.9);
+    playBark: () => {
+        if (SoundSynth.muted || !SoundSynth.barkElement) return;
+        SoundSynth.barkElement.currentTime = 0;
+        SoundSynth.barkElement.play().catch(e => console.error("Bark sound play failed:", e));
     },
 
     playPadelWhoosh: () => {

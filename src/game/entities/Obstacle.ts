@@ -116,7 +116,7 @@ export class Obstacle {
 
         // Bark logic
         if (this.type === ObstacleType.DOG && !this.honked && this.x < 500) {
-            SoundSynth.playBark(this.dogVariant.scale);
+            SoundSynth.playBark();
             this.honked = true; // Reusing honked for bark
         }
 
