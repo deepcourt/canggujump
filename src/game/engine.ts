@@ -14,6 +14,7 @@ import { Obstacle } from './entities/Obstacle';
 import { SceneryElement } from './entities/Scenery';
 import { Spring } from './entities/Spring';
 import { Decoration } from './entities/Decoration';
+import { ComboMessage } from './entities/ComboMessage';
 
 const getRandomObstacleConfig = () => {
     const totalWeight = OBSTACLE_DEFINITIONS.reduce((sum, def) => sum + def.weight, 0);
@@ -68,6 +69,12 @@ export interface GameEngineState {
     mountainPool: Decoration[];
     mountainSpawnTimer: number;
     mountainImage: HTMLImageElement | null;
+    sparkImages: HTMLImageElement[];
+    twirlImages: HTMLImageElement[];
+    starImages: HTMLImageElement[];
+    knockOffCombo: number;
+    jumpCombo: number;
+    comboMessagePool: ComboMessage[];
 }
 
 export interface GameEngineCallbacks {
@@ -124,7 +131,13 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         grassImages: [],
         mountainPool: Array.from({ length: 5 }, () => new Decoration()),
         mountainSpawnTimer: 8,
-        mountainImage: null
+        mountainImage: null,
+        sparkImages: [],
+        twirlImages: [],
+        starImages: [],
+        knockOffCombo: 0,
+        jumpCombo: 0,
+        comboMessagePool: Array.from({ length: 3 }, () => new ComboMessage())
     };
 
     // Pre-load explosion images
@@ -171,6 +184,16 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(['./images/pointy_mountains.png']).then(([img]) => {
         state.mountainImage = img;
     }).catch(err => console.error("Failed to load mountain image:", err));
+
+    // Pre-load combo effect images
+    const sparkPaths = Array.from({ length: 7 }, (_, i) => `./images/spark_0${i + 1}.png`);
+    loadImages(sparkPaths).then(imgs => state.sparkImages = imgs).catch(err => console.error("Failed to load spark images:", err));
+
+    const twirlPaths = Array.from({ length: 3 }, (_, i) => `./images/twirl_0${i + 1}.png`);
+    loadImages(twirlPaths).then(imgs => state.twirlImages = imgs).catch(err => console.error("Failed to load twirl images:", err));
+
+    const starPaths = Array.from({ length: 9 }, (_, i) => `./images/star_0${i + 1}.png`);
+    loadImages(starPaths).then(imgs => state.starImages = imgs).catch(err => console.error("Failed to load star images:", err));
 
 
     let canvas: HTMLCanvasElement | null = null;
@@ -344,6 +367,26 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                         m.smokeTimer = 1.5 + Math.random() * 2;
                     }
                 }
+
+                // --- JUMP COMBO ---
+                if (obs.active && !obs.isCrashed && !obs.isCleared && obs.x + obs.width < state.player.x) {
+                    obs.isCleared = true;
+                    // Ignore non-dangerous obstacles for combo
+                    if (obs.type !== ObstacleType.PROTEIN_SHAKE) {
+                        state.knockOffCombo = 0;
+                        state.jumpCombo++;
+                        if (state.jumpCombo >= 3) {
+                            if (state.starImages.length > 0) {
+                                const p = getFromPool(state.particlePool, () => new Particle());
+                                const starImg = state.starImages[Math.floor(Math.random() * state.starImages.length)];
+                                p.spawn(state.player.x + state.player.width / 2, state.player.y - 30, '#fff', 'EXPLOSION', starImg);
+                            }
+                            const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
+                            msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Super Jumper!");
+                            state.jumpCombo = 0;
+                        }
+                    }
+                }
             }
         });
 
@@ -414,6 +457,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
 
         state.particlePool.forEach(p => p.active && (p.update(dt), p.draw(ctx)));
 
+        state.comboMessagePool.forEach(c => c.active && (c.update(dt), c.draw(ctx)));
+
         for (let i = 0; i < 3; i++) {
             const hx = 25 + i * 35, hy = 25;
             ctx.fillStyle = i < state.player.lives ? '#ff5252' : '#444';
@@ -450,17 +495,59 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                         obs.crashVX = 500 + Math.random() * 300;
                         obs.crashVY = -500 - Math.random() * 300;
                         state.shakeTimer = 0.1;
+
+                        // --- KNOCK-OFF COMBO ---
+                        if (state.sparkImages.length > 0) {
+                            const p = getFromPool(state.particlePool, () => new Particle());
+                            const sparkImg = state.sparkImages[Math.floor(Math.random() * state.sparkImages.length)];
+                            p.spawn(obs.x + obs.width / 2, obs.y + obs.height / 2, '#fff', 'EXPLOSION', sparkImg);
+                        }
+                        state.jumpCombo = 0;
+                        state.knockOffCombo++;
+                        if (state.knockOffCombo >= 3) {
+                            if (state.twirlImages.length > 0) {
+                                const p = getFromPool(state.particlePool, () => new Particle());
+                                const twirlImg = state.twirlImages[Math.floor(Math.random() * state.twirlImages.length)];
+                                p.spawn(state.player.x + state.player.width / 2, state.player.y - 30, '#fff', 'EXPLOSION', twirlImg);
+                            }
+                            const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
+                            msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Knockartist!");
+                            state.knockOffCombo = 0;
+                        }
+
                     } else if (isStompable && isStomping) {
                         obs.isCrashed = true;
                         obs.crashVX = 200 + Math.random() * 100;
                         obs.crashVY = -300 - Math.random() * 200;
                         state.player.dy = -GAME_CONFIG.JUMP_FORCE * 0.6; // Stomp bounce
                         SoundSynth.playHit();
+
+                        // --- KNOCK-OFF COMBO ---
+                        if (state.sparkImages.length > 0) {
+                            const p = getFromPool(state.particlePool, () => new Particle());
+                            const sparkImg = state.sparkImages[Math.floor(Math.random() * state.sparkImages.length)];
+                            p.spawn(obs.x + obs.width / 2, obs.y + obs.height / 2, '#fff', 'EXPLOSION', sparkImg);
+                        }
+                        state.jumpCombo = 0;
+                        state.knockOffCombo++;
+                        if (state.knockOffCombo >= 3) {
+                             if (state.twirlImages.length > 0) {
+                                const p = getFromPool(state.particlePool, () => new Particle());
+                                const twirlImg = state.twirlImages[Math.floor(Math.random() * state.twirlImages.length)];
+                                p.spawn(state.player.x + state.player.width / 2, state.player.y - 30, '#fff', 'EXPLOSION', twirlImg);
+                            }
+                            const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
+                            msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Knockartist!");
+                            state.knockOffCombo = 0;
+                        }
+
                     } else if (state.player.hitTimer <= 0) {
                         obs.active = false;
                         state.player.lives -= 1;
                         state.player.hitTimer = 1.0;
                         state.shakeTimer = 0.3;
+                        state.knockOffCombo = 0;
+                        state.jumpCombo = 0;
 
                         if (state.player.lives <= 0) {
                             state.lastHitObstacleType = obs.type;
@@ -528,6 +615,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.cloudPool.forEach(p => p.active = false);
         state.grassPool.forEach(p => p.active = false);
         state.mountainPool.forEach(p => p.active = false);
+        state.comboMessagePool.forEach(p => p.active = false);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 30 + Math.random() * 60) getFromPool(state.groundPool, () => new GroundDetail()).spawn(x);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 150 + Math.random() * 200) getFromPool(state.sceneryPool, () => new SceneryElement()).spawn(x, 'PALM');
         state.score = 0;
@@ -540,6 +628,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.cloudSpawnTimer = 2;
         state.grassSpawnTimer = 0.5;
         state.mountainSpawnTimer = 8;
+        state.knockOffCombo = 0;
+        state.jumpCombo = 0;
         state.bgTimer = 0;
         state.bgScrollX = 0;
         state.bgType = 'OCEAN';

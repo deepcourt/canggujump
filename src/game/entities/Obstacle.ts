@@ -19,6 +19,7 @@ export class Obstacle {
     smokeTimer: number = 0;
     hasSurfboard: boolean = false;
     honked: boolean = false;
+    isCleared: boolean = false;
     isCrashed: boolean = false;
     crashVX: number = 0;
     crashVY: number = 0;
@@ -36,6 +37,7 @@ export class Obstacle {
         this.x = startX;
         this.active = true;
         this.honked = false;
+        this.isCleared = false;
         this.isCrashed = false;
         this.crashVX = 0;
         this.crashVY = 0;
