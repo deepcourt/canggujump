@@ -123,19 +123,27 @@ export const createBodyBuilder = (): PlayerEntity => ({
         ctx.fill();
         ctx.stroke();
         
-        // Head - Rounded
-        ctx.beginPath();
-        ctx.roundRect(ix + (24/65)*w, iy - (8/80)*h, (20/65)*w, (24/80)*h, 6 * sizeMult);
-        ctx.fill();
-        ctx.stroke();
-        
         if (this.powerUpTimer > 0) {
-            // Pink Helmet for powered-up state
+            // Spheric Pink Fluo Helmet
             ctx.fillStyle = GAME_CONFIG.COLORS.PINK_FLUO;
             ctx.beginPath();
-            ctx.roundRect(ix + (22/65)*w, iy - (15/80)*h, (24/65)*w, (15/80)*h, 5 * sizeMult);
+            const helmetCenterX = ix + (34/65)*w;
+            const helmetCenterY = iy + (4/80)*h;
+            const helmetRadius = (12/65)*w;
+            ctx.arc(helmetCenterX, helmetCenterY, helmetRadius, 0, Math.PI * 2);
             ctx.fill();
+            ctx.stroke();
+
+            // Visor
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(helmetCenterX - helmetRadius * 0.8, helmetCenterY - (2/80)*h, helmetRadius * 1.6, (6/80)*h);
         } else {
+            // Head - Rounded
+            ctx.beginPath();
+            ctx.roundRect(ix + (24/65)*w, iy - (8/80)*h, (20/65)*w, (24/80)*h, 6 * sizeMult);
+            ctx.fill();
+            ctx.stroke();
+        
             // Ray-Ban Style Sunglasses
             ctx.fillStyle = '#111';
             ctx.beginPath();
