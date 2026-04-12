@@ -18,6 +18,7 @@ export const SoundSynth = {
     barkElement: null as HTMLAudioElement | null,
     shutterElement: null as HTMLAudioElement | null,
     springJumpElement: null as HTMLAudioElement | null,
+    bikeHornElement: null as HTMLAudioElement | null,
     musicVolume: 0.3,
     
     init: () => {
@@ -72,6 +73,11 @@ export const SoundSynth = {
         if (!SoundSynth.springJumpElement) {
             SoundSynth.springJumpElement = new Audio('audio/apricotjumpbounce-jump.mp3');
             SoundSynth.springJumpElement.volume = 0.7;
+        }
+
+        if (!SoundSynth.bikeHornElement) {
+            SoundSynth.bikeHornElement = new Audio('audio/bike-horn.wav');
+            SoundSynth.bikeHornElement.volume = 0.6;
         }
     },
 
@@ -200,6 +206,12 @@ export const SoundSynth = {
         if (!SoundSynth.musicElement) return;
         SoundSynth.musicElement.pause();
         SoundSynth.musicElement.currentTime = 0;
+    },
+
+    playBikeHorn: () => {
+        if (SoundSynth.muted || !SoundSynth.bikeHornElement) return;
+        SoundSynth.bikeHornElement.currentTime = 0;
+        SoundSynth.bikeHornElement.play().catch(e => console.error("Bike horn sound play failed:", e));
     },
 
     playHonk: () => {

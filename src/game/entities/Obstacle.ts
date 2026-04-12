@@ -116,7 +116,11 @@ export class Obstacle {
 
         // Honk logic
         if ((this.type === ObstacleType.SCOOTER || this.type === ObstacleType.TRIPLE_SCOOTER) && !this.honked && this.x < 500) {
-            SoundSynth.playHonk();
+            if (this.type === ObstacleType.SCOOTER && !this.hasSurfboard) {
+                SoundSynth.playBikeHorn();
+            } else {
+                SoundSynth.playHonk();
+            }
             this.honked = true;
         }
 
