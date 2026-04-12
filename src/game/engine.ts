@@ -13,6 +13,7 @@ import { GroundDetail } from './entities/Ground';
 import { Obstacle } from './entities/Obstacle';
 import { SceneryElement } from './entities/Scenery';
 import { Spring } from './entities/Spring';
+import { Decoration } from './entities/Decoration';
 
 const getRandomObstacleConfig = () => {
     const totalWeight = OBSTACLE_DEFINITIONS.reduce((sum, def) => sum + def.weight, 0);
@@ -58,6 +59,12 @@ export interface GameEngineState {
     springImage: HTMLImageElement | null;
     springOutImage: HTMLImageElement | null;
     flashImages: HTMLImageElement[];
+    cloudPool: Decoration[];
+    cloudSpawnTimer: number;
+    cloudImages: HTMLImageElement[];
+    grassPool: Decoration[];
+    grassSpawnTimer: number;
+    grassImages: HTMLImageElement[];
 }
 
 export interface GameEngineCallbacks {
@@ -105,7 +112,13 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         springSpawnTimer: 5,
         springImage: null,
         springOutImage: null,
-        flashImages: []
+        flashImages: [],
+        cloudPool: Array.from({ length: 10 }, () => new Decoration()),
+        cloudSpawnTimer: 2,
+        cloudImages: [],
+        grassPool: Array.from({ length: 20 }, () => new Decoration()),
+        grassSpawnTimer: 0.5,
+        grassImages: []
     };
 
     // Pre-load explosion images
@@ -135,6 +148,18 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(flashPaths).then(imgs => {
         state.flashImages = imgs;
     }).catch(err => console.error("Failed to load flash images:", err));
+
+    // Pre-load cloud images
+    const cloudPaths = Array.from({ length: 8 }, (_, i) => `./images/cloud${i + 2}.png`);
+    loadImages(cloudPaths).then(imgs => {
+        state.cloudImages = imgs;
+    }).catch(err => console.error("Failed to load cloud images:", err));
+
+    // Pre-load grass images
+    const grassPaths = Array.from({ length: 6 }, (_, i) => `./images/grass${i + 1}.png`);
+    loadImages(grassPaths).then(imgs => {
+        state.grassImages = imgs;
+    }).catch(err => console.error("Failed to load grass images:", err));
 
 
     let canvas: HTMLCanvasElement | null = null;
@@ -198,6 +223,34 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         }
     };
 
+    const spawnCloud = (dt: number) => {
+        state.cloudSpawnTimer -= dt;
+        if (state.cloudSpawnTimer <= 0 && state.cloudImages.length > 0) {
+            const cloud = getFromPool(state.cloudPool, () => new Decoration());
+            const randomImage = state.cloudImages[Math.floor(Math.random() * state.cloudImages.length)];
+            const y = 20 + Math.random() * 60;
+            const scale = 0.5 + Math.random();
+            const width = randomImage.width * scale;
+            const height = randomImage.height * scale;
+            const speedMultiplier = 0.1 + Math.random() * 0.2;
+            cloud.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, speedMultiplier);
+            state.cloudSpawnTimer = 4 + Math.random() * 5; // Spawn a new cloud every 4-9 seconds
+        }
+    };
+
+    const spawnGrass = (dt: number) => {
+        state.grassSpawnTimer -= dt;
+        if (state.grassSpawnTimer <= 0 && state.grassImages.length > 0) {
+            const grass = getFromPool(state.grassPool, () => new Decoration());
+            const randomImage = state.grassImages[Math.floor(Math.random() * state.grassImages.length)];
+            const width = 20 + Math.random() * 15;
+            const height = (width / randomImage.width) * randomImage.height;
+            const y = GAME_CONFIG.GROUND_Y - height + 2;
+            grass.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, 1); // Moves with the ground
+            state.grassSpawnTimer = 0.8 + Math.random() * 1.2; // Spawn grass fairly often
+        }
+    };
+
     const gameOver = () => {
         state.gameRunning = false;
         state.canRestart = false;
@@ -249,6 +302,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         ctx.beginPath();
         ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
         ctx.fill();
+
+        spawnCloud(dt);
+        state.cloudPool.forEach(c => c.active && (c.update(dt, state.gameSpeed), c.draw(ctx)));
 
         state.bgTimer += dt;
         state.bgScrollX = (state.bgScrollX + state.gameSpeed * 0.2 * dt) % 1000;
@@ -303,6 +359,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
 
         spawnGroundDetails(dt);
         state.groundPool.forEach(d => d.active && (d.update(dt, state.gameSpeed), d.draw(ctx)));
+
+        spawnGrass(dt);
+        state.grassPool.forEach(g => g.active && (g.update(dt, state.gameSpeed), g.draw(ctx)));
 
         state.player.update(dt, () => SoundSynth.playStep(), () => {
             for (let i = 0; i < 8; i++) getFromPool(state.particlePool, () => new Particle()).spawn(state.player.x + state.player.width / 2, GAME_CONFIG.GROUND_Y, '#ddd', 'DUST');
@@ -391,7 +450,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                     state.player.dy > 0) // Must be falling onto it
                 {
                     spring.use();
-                    state.player.dy = -GAME_CONFIG.JUMP_FORCE * 3; // Super jump!
+                    state.player.dy = -GAME_CONFIG.JUMP_FORCE * 2.2; // Super jump!
                     SoundSynth.playBoing();
 
                     // Flash effect
@@ -422,6 +481,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.groundPool.forEach(p => p.active = false);
         state.sceneryPool.forEach(p => p.active = false);
         state.springPool.forEach(p => p.active = false);
+        state.cloudPool.forEach(p => p.active = false);
+        state.grassPool.forEach(p => p.active = false);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 30 + Math.random() * 60) getFromPool(state.groundPool, () => new GroundDetail()).spawn(x);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 150 + Math.random() * 200) getFromPool(state.sceneryPool, () => new SceneryElement()).spawn(x, 'PALM');
         state.score = 0;
@@ -431,6 +492,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.groundSpawnTimer = 0;
         state.scenerySpawnTimer = 0;
         state.springSpawnTimer = 5;
+        state.cloudSpawnTimer = 2;
+        state.grassSpawnTimer = 0.5;
         state.bgTimer = 0;
         state.bgScrollX = 0;
         state.bgType = 'OCEAN';
