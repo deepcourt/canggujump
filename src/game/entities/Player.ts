@@ -20,6 +20,8 @@ export interface PlayerEntity {
     powerUpLevel: number;
     lives: number;
     hitTimer: number;
+    headBob: number;
+    armSwing: number;
     // Juice
     squashTimer: number;
     stretchTimer: number;
@@ -43,6 +45,8 @@ export const createBodyBuilder = (): PlayerEntity => ({
     powerUpLevel: 0,
     lives: 3,
     hitTimer: 0,
+    headBob: 0,
+    armSwing: 0,
     squashTimer: 0,
     stretchTimer: 0,
     
@@ -57,6 +61,8 @@ export const createBodyBuilder = (): PlayerEntity => ({
         this.powerUpLevel = 0;
         this.lives = 3;
         this.hitTimer = 0;
+        this.headBob = 0;
+        this.armSwing = 0;
         this.squashTimer = 0;
         this.stretchTimer = 0;
     },
@@ -80,6 +86,7 @@ export const createBodyBuilder = (): PlayerEntity => ({
 
         const ix = Math.floor(this.x);
         const iy = Math.floor(this.y - (h - this.height));
+        const iyWalk = iy + this.headBob;
 
         // Immunity Glow
         if (this.powerUpTimer > 0) {
@@ -97,7 +104,7 @@ export const createBodyBuilder = (): PlayerEntity => ({
         
         // Massive Torso (Muscles) - Rounded for smoothness
         ctx.beginPath();
-        ctx.roundRect(ix + (12/65)*w, iy + (15/80)*h, (40/65)*w, (38/80)*h, 10 * sizeMult);
+        ctx.roundRect(ix + (12/65)*w, iyWalk + (15/80)*h, (40/65)*w, (38/80)*h, 10 * sizeMult);
         ctx.fill();
         ctx.stroke();
         
@@ -106,29 +113,41 @@ export const createBodyBuilder = (): PlayerEntity => ({
         ctx.lineWidth = 2 * sizeMult;
         // Chest Tattoo (More detailed tribal)
         ctx.beginPath();
-        ctx.moveTo(ix + (18/65)*w, iy + (22/80)*h);
-        ctx.quadraticCurveTo(ix + (32/65)*w, iy + (35/80)*h, ix + (46/65)*w, iy + (22/80)*h);
+        ctx.moveTo(ix + (18/65)*w, iyWalk + (22/80)*h);
+        ctx.quadraticCurveTo(ix + (32/65)*w, iyWalk + (35/80)*h, ix + (46/65)*w, iyWalk + (22/80)*h);
         ctx.stroke();
         
-        // Massive Arms (Biceps) - Rounded
+        // Massive Arms (Biceps) - With swinging motion
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 2 * sizeMult;
         ctx.fillStyle = GAME_CONFIG.COLORS.SKIN;
+        
+        // Left Arm (swings forward)
+        ctx.save();
+        ctx.translate(ix + (2/65)*w, iyWalk + (25/80)*h);
+        ctx.rotate(this.armSwing);
+        ctx.translate(-(ix + (2/65)*w), -(iyWalk + (25/80)*h));
         ctx.beginPath();
-        ctx.roundRect(ix - (5/65)*w, iy + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult); // Left arm
-        ctx.fill();
-        ctx.stroke();
+        ctx.roundRect(ix - (5/65)*w, iyWalk + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+
+        // Right Arm (swings back)
+        ctx.save();
+        ctx.translate(ix + (63/65)*w, iyWalk + (25/80)*h);
+        ctx.rotate(-this.armSwing);
+        ctx.translate(-(ix + (63/65)*w), -(iyWalk + (25/80)*h));
         ctx.beginPath();
-        ctx.roundRect(ix + (52/65)*w, iy + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult); // Right arm
-        ctx.fill();
-        ctx.stroke();
+        ctx.roundRect(ix + (52/65)*w, iyWalk + (15/80)*h, (18/65)*w, (35/80)*h, 8 * sizeMult);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
         
         if (this.powerUpTimer > 0) {
             // Spheric Pink Fluo Helmet
             ctx.fillStyle = GAME_CONFIG.COLORS.PINK_FLUO;
             ctx.beginPath();
             const helmetCenterX = ix + (34/65)*w;
-            const helmetCenterY = iy + (4/80)*h;
+            const helmetCenterY = iyWalk + (4/80)*h;
             const helmetRadius = (12/65)*w;
             ctx.arc(helmetCenterX, helmetCenterY, helmetRadius, 0, Math.PI * 2);
             ctx.fill();
@@ -144,22 +163,22 @@ export const createBodyBuilder = (): PlayerEntity => ({
         } else {
             // Head - Rounded
             ctx.beginPath();
-            ctx.roundRect(ix + (24/65)*w, iy - (8/80)*h, (20/65)*w, (24/80)*h, 6 * sizeMult);
+            ctx.roundRect(ix + (24/65)*w, iyWalk - (8/80)*h, (20/65)*w, (24/80)*h, 6 * sizeMult);
             ctx.fill();
             ctx.stroke();
         
             // Ray-Ban Style Sunglasses
             ctx.fillStyle = '#111';
             ctx.beginPath();
-            ctx.roundRect(ix + (26/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
-            ctx.roundRect(ix + (35/65)*w, iy - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
+            ctx.roundRect(ix + (26/65)*w, iyWalk - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
+            ctx.roundRect(ix + (35/65)*w, iyWalk - (2/80)*h, (7/65)*w, (6/80)*h, [2, 2, 4, 4]);
             ctx.fill();
         }
         
         // Shorts - PINK FLUO (Guaranteed)
         ctx.fillStyle = '#FF00FF'; 
         ctx.beginPath();
-        ctx.roundRect(ix + (12/65)*w, iy + (50/80)*h, (40/65)*w, (15/80)*h, 4 * sizeMult);
+        ctx.roundRect(ix + (12/65)*w, iyWalk + (50/80)*h, (40/65)*w, (15/80)*h, 4 * sizeMult);
         ctx.fill();
         ctx.stroke();
         
@@ -168,14 +187,14 @@ export const createBodyBuilder = (): PlayerEntity => ({
         const legW = (12/65)*w;
         ctx.beginPath();
         if (!this.grounded) {
-            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (15/80)*h, 4);
-            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (15/80)*h, 4);
+            ctx.roundRect(ix + (18/65)*w, iyWalk + (65/80)*h, legW, (15/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iyWalk + (65/80)*h, legW, (15/80)*h, 4);
         } else if (this.legState) {
-            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (20/80)*h, 4);
-            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (10/80)*h, 4);
+            ctx.roundRect(ix + (18/65)*w, iyWalk + (65/80)*h, legW, (20/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iyWalk + (65/80)*h, legW, (10/80)*h, 4);
         } else {
-            ctx.roundRect(ix + (18/65)*w, iy + (65/80)*h, legW, (10/80)*h, 4);
-            ctx.roundRect(ix + (40/65)*w, iy + (65/80)*h, legW, (20/80)*h, 4);
+            ctx.roundRect(ix + (18/65)*w, iyWalk + (65/80)*h, legW, (10/80)*h, 4);
+            ctx.roundRect(ix + (40/65)*w, iyWalk + (65/80)*h, legW, (20/80)*h, 4);
         }
         ctx.fill();
         ctx.stroke();
@@ -217,6 +236,13 @@ export const createBodyBuilder = (): PlayerEntity => ({
             this.animTimer = 0;
             if (this.grounded && onStep) onStep();
         }
+
+        // Secondary Motion (Head Bob and Arm Swing)
+        const targetHeadBob = this.grounded && this.legState ? -2 : 0;
+        this.headBob += (targetHeadBob - this.headBob) * dt * 10;
+        
+        const targetArmSwing = (this.legState ? 0.3 : -0.3) * (this.grounded ? 1 : 0.2);
+        this.armSwing += (targetArmSwing - this.armSwing) * dt * 10;
 
         const wasGrounded = this.grounded;
 

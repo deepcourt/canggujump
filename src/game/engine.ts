@@ -4,7 +4,7 @@
 */
 
 import { GAME_CONFIG, ObstacleType } from './config';
-import { OBSTACLE_DEFINITIONS } from './obstacles.config';
+import { OBSTACLES_BY_PHASE, DIFFICULTY_THRESHOLDS } from './difficulty.config';
 import { SoundSynth } from './audio';
 import { getFromPool, loadImages } from './utils';
 import { PlayerEntity, createBodyBuilder } from './entities/Player';
@@ -16,17 +16,28 @@ import { Spring } from './entities/Spring';
 import { Decoration } from './entities/Decoration';
 import { ComboMessage } from './entities/ComboMessage';
 
-const getRandomObstacleConfig = () => {
-    const totalWeight = OBSTACLE_DEFINITIONS.reduce((sum, def) => sum + def.weight, 0);
+const getAvailableObstacles = (phase: number) => {
+    let available = [...OBSTACLES_BY_PHASE[1]];
+    if (phase >= 2) {
+        available = available.concat(OBSTACLES_BY_PHASE[2]);
+    }
+    if (phase >= 3) {
+        available = available.concat(OBSTACLES_BY_PHASE[3]);
+    }
+    return available;
+};
+
+const getRandomObstacleConfig = (phase: number) => {
+    const definitions = getAvailableObstacles(phase);
+    const totalWeight = definitions.reduce((sum, def) => sum + def.weight, 0);
     let random = Math.random() * totalWeight;
-    for (const def of OBSTACLE_DEFINITIONS) {
+    for (const def of definitions) {
         if (random < def.weight) {
             return def;
         }
         random -= def.weight;
     }
-    // Fallback in case of floating point issues
-    return OBSTACLE_DEFINITIONS[OBSTACLE_DEFINITIONS.length - 1];
+    return definitions[definitions.length - 1];
 };
 
 export interface GameEngineState {
@@ -72,6 +83,7 @@ export interface GameEngineState {
     knockOffCombo: number;
     jumpCombo: number;
     comboMessagePool: ComboMessage[];
+    difficultyPhase: number;
 }
 
 export interface GameEngineCallbacks {
@@ -131,7 +143,8 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         starImages: [],
         knockOffCombo: 0,
         jumpCombo: 0,
-        comboMessagePool: Array.from({ length: 3 }, () => new ComboMessage())
+        comboMessagePool: Array.from({ length: 3 }, () => new ComboMessage()),
+        difficultyPhase: 1
     };
 
     // Pre-load explosion images
@@ -194,7 +207,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             let count = r > 0.9 ? 2 : 1;
             let nextX = GAME_CONFIG.CANVAS_WIDTH;
             for (let i = 0; i < count; i++) {
-                const config = getRandomObstacleConfig();
+                const config = getRandomObstacleConfig(state.difficultyPhase);
                 const obstacle = getFromPool(state.obstaclePool, () => new Obstacle());
                 obstacle.spawn(nextX, config);
                 if (obstacle.type === ObstacleType.DOG) {
@@ -324,6 +337,15 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         ctx.beginPath();
         ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
         ctx.fill();
+
+        // Update difficulty phase based on score
+        const currentScore = Math.floor(state.score / 10);
+        if (state.difficultyPhase === 1 && currentScore >= DIFFICULTY_THRESHOLDS.PHASE_2) {
+            state.difficultyPhase = 2;
+        }
+        if (state.difficultyPhase === 2 && currentScore >= DIFFICULTY_THRESHOLDS.PHASE_3) {
+            state.difficultyPhase = 3;
+        }
 
         spawnMountain(dt);
         state.mountainPool.forEach(m => {
@@ -605,6 +627,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.mountainSpawnTimer = 8;
         state.knockOffCombo = 0;
         state.jumpCombo = 0;
+        state.difficultyPhase = 1;
         state.bgTimer = 0;
         state.bgScrollX = 0;
         state.bgType = 'OCEAN';
