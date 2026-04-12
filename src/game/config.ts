@@ -16,7 +16,7 @@ export const GAME_CONFIG = {
     SPEED_INCREMENT: 5,
     VISION_FPS: 30,
     COLORS: {
-        PRIMARY: '#535353',
+        PRIMARY: '#414a4c', // Dark volcanic slate
         SKY: '#87CEEB', // Sky blue
         OCEAN: '#4682B4', // Steel blue
         SAND: '#DEB887', // Burly wood

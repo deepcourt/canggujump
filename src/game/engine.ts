@@ -63,9 +63,6 @@ export interface GameEngineState {
     cloudPool: Decoration[];
     cloudSpawnTimer: number;
     cloudImages: HTMLImageElement[];
-    grassPool: Decoration[];
-    grassSpawnTimer: number;
-    grassImages: HTMLImageElement[];
     mountainPool: Decoration[];
     mountainSpawnTimer: number;
     mountainImage: HTMLImageElement | null;
@@ -126,9 +123,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         cloudPool: Array.from({ length: 10 }, () => new Decoration()),
         cloudSpawnTimer: 2,
         cloudImages: [],
-        grassPool: Array.from({ length: 20 }, () => new Decoration()),
-        grassSpawnTimer: 0.5,
-        grassImages: [],
         mountainPool: Array.from({ length: 5 }, () => new Decoration()),
         mountainSpawnTimer: 8,
         mountainImage: null,
@@ -173,12 +167,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(cloudPaths).then(imgs => {
         state.cloudImages = imgs;
     }).catch(err => console.error("Failed to load cloud images:", err));
-
-    // Pre-load grass images
-    const grassPaths = Array.from({ length: 6 }, (_, i) => `./images/grass${i + 1}.png`);
-    loadImages(grassPaths).then(imgs => {
-        state.grassImages = imgs;
-    }).catch(err => console.error("Failed to load grass images:", err));
 
     // Pre-load mountain image
     loadImages(['./images/pointy_mountains.png']).then(([img]) => {
@@ -282,19 +270,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             const speedMultiplier = 0.08; // Very slow for parallax
             mountain.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, state.mountainImage, speedMultiplier, 'MOUNTAIN');
             state.mountainSpawnTimer = 20 + Math.random() * 15; // Spawn a new mountain every 20-35 seconds
-        }
-    };
-
-    const spawnGrass = (dt: number) => {
-        state.grassSpawnTimer -= dt;
-        if (state.grassSpawnTimer <= 0 && state.grassImages.length > 0) {
-            const grass = getFromPool(state.grassPool, () => new Decoration());
-            const randomImage = state.grassImages[Math.floor(Math.random() * state.grassImages.length)];
-            const width = 20 + Math.random() * 15;
-            const height = (width / randomImage.width) * randomImage.height;
-            const y = GAME_CONFIG.GROUND_Y - height + 2;
-            grass.spawn(GAME_CONFIG.CANVAS_WIDTH, y, width, height, randomImage, 1, 'GRASS'); // Moves with the ground
-            state.grassSpawnTimer = 0.8 + Math.random() * 1.2; // Spawn grass fairly often
         }
     };
 
@@ -427,9 +402,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
 
         spawnGroundDetails(dt);
         state.groundPool.forEach(d => d.active && (d.update(dt, state.gameSpeed), d.draw(ctx)));
-
-        spawnGrass(dt);
-        state.grassPool.forEach(g => g.active && (g.update(dt, state.gameSpeed), g.draw(ctx)));
 
         state.player.update(dt, () => SoundSynth.playStep(), () => {
             for (let i = 0; i < 8; i++) getFromPool(state.particlePool, () => new Particle()).spawn(state.player.x + state.player.width / 2, GAME_CONFIG.GROUND_Y, '#ddd', 'DUST');
@@ -614,7 +586,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.sceneryPool.forEach(p => p.active = false);
         state.springPool.forEach(p => p.active = false);
         state.cloudPool.forEach(p => p.active = false);
-        state.grassPool.forEach(p => p.active = false);
         state.mountainPool.forEach(p => p.active = false);
         state.comboMessagePool.forEach(p => p.active = false);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 30 + Math.random() * 60) getFromPool(state.groundPool, () => new GroundDetail()).spawn(x);
@@ -627,7 +598,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.scenerySpawnTimer = 0;
         state.springSpawnTimer = 5;
         state.cloudSpawnTimer = 2;
-        state.grassSpawnTimer = 0.5;
         state.mountainSpawnTimer = 8;
         state.knockOffCombo = 0;
         state.jumpCombo = 0;
