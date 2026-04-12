@@ -17,6 +17,7 @@ export const SoundSynth = {
     musicElement: null as HTMLAudioElement | null,
     barkElement: null as HTMLAudioElement | null,
     shutterElement: null as HTMLAudioElement | null,
+    springJumpElement: null as HTMLAudioElement | null,
     musicVolume: 0.3,
     
     init: () => {
@@ -30,7 +31,6 @@ export const SoundSynth = {
         SoundSynth.cacheSound('hit', SoundSynth.createHitBuffer());
         SoundSynth.cacheSound('powerup', SoundSynth.createPowerupBuffer());
         SoundSynth.cacheSound('click', SoundSynth.createClickBuffer());
-        SoundSynth.cacheSound('boing', SoundSynth.createBoingBuffer());
         SoundSynth.cacheSound('roar', SoundSynth.createNoiseBuffer(0.8));
 
         // Load background music
@@ -67,6 +67,11 @@ export const SoundSynth = {
         if (!SoundSynth.shutterElement) {
             SoundSynth.shutterElement = new Audio('audio/camera-shutter-and-flash.mp3');
             SoundSynth.shutterElement.volume = 0.6;
+        }
+
+        if (!SoundSynth.springJumpElement) {
+            SoundSynth.springJumpElement = new Audio('audio/apricotjumpbounce-jump.mp3');
+            SoundSynth.springJumpElement.volume = 0.7;
         }
     },
 
@@ -165,25 +170,16 @@ export const SoundSynth = {
         return buffer;
     },
 
-    createBoingBuffer: () => {
-        const ctx = SoundSynth.ctx!;
-        const duration = 0.3;
-        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) {
-            const t = i / ctx.sampleRate;
-            const freq = 600 * Math.exp(-t * 20); // Fast descending pitch
-            data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-t * 10) * 0.7;
-        }
-        return buffer;
-    },
-
     playJump: () => SoundSynth.play('jump', 0.15),
     playStep: () => SoundSynth.play('step', 0.05),
     playHit: () => SoundSynth.play('hit', 0.2),
     playPowerup: () => SoundSynth.play('powerup', 0.2),
     playClick: () => SoundSynth.play('click', 0.1),
-    playBoing: () => SoundSynth.play('boing', 0.4),
+    playBoing: () => {
+        if (SoundSynth.muted || !SoundSynth.springJumpElement) return;
+        SoundSynth.springJumpElement.currentTime = 0;
+        SoundSynth.springJumpElement.play().catch(e => console.error("Spring jump sound play failed:", e));
+    },
 
     setMuted: (isMuted: boolean) => {
         SoundSynth.muted = isMuted;
