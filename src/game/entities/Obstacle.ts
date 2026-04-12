@@ -97,7 +97,7 @@ export class Obstacle {
                 }
             } else {
                 // Randomly stop to take a selfie if in view
-                if (this.x < 600 && this.x > 200 && Math.random() < 0.01) {
+                if (this.x < 600 && this.x > 200 && Math.random() < 0.015) {
                     this.isPosing = true;
                     this.selfieTimer = 1.0 + Math.random() * 1.0;
                     SoundSynth.playCameraShutter();

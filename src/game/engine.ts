@@ -389,6 +389,10 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         ctx.fillStyle = GAME_CONFIG.COLORS.SAND;
         ctx.fillRect(0, 200, canvas.width, 42);
 
+        // Fill the very bottom of the canvas
+        ctx.fillStyle = GAME_CONFIG.COLORS.PRIMARY;
+        ctx.fillRect(0, 242, canvas.width, canvas.height - 242);
+
         spawnScenery(dt);
         state.sceneryPool.forEach(s => s.active && (s.update(dt, state.gameSpeed), s.draw(ctx)));
 

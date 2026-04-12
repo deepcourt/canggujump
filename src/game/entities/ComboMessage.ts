@@ -9,7 +9,7 @@ export class ComboMessage {
     y: number = 0;
     text: string = '';
     life: number = 0;
-    maxLife: number = 1.5; // seconds
+    maxLife: number = 2.5; // seconds
 
     spawn(x: number, y: number, text: string) {
         this.active = true;
