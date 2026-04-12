@@ -4,9 +4,9 @@
 */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { GAME_CONFIG, GAME_OVER_MESSAGES } from '../game/config';
-import { SoundSynth } from '../game/audio';
-import { createGameEngine, GameEngine, GameEngineState } from '../game/engine';
+import { GAME_CONFIG, GAME_OVER_MESSAGES } from '../src/game/config';
+import { SoundSynth } from '../src/game/audio';
+import { createGameEngine, GameEngine, GameEngineState } from '../src/game/engine';
 
 interface VisionState {
     poseLandmarker: any;
