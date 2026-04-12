@@ -236,41 +236,79 @@ export class Obstacle {
             }
 
         } else if (this.type === ObstacleType.INFLUENCER) {
-            // Influencer Character
+            // Influencer Character - More detailed and stylized
+            const walk = this.isPosing ? 0 : Math.sin(Date.now() / 100) * 2;
+            const iyWalk = iy + walk;
+
+            // Legs - More shapely
             ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
-            // Legs
-            const walk = this.isPosing ? 0 : Math.sin(Date.now() / 100) * 5;
-            ctx.fillRect(ix + 12, iy + 45, 6, 20 + walk);
-            ctx.fillRect(ix + 22, iy + 45, 6, 20 - walk);
-            
-            // Body (Crop top)
-            ctx.fillStyle = '#ff6b6b';
-            ctx.fillRect(ix + 10, iy + 25, 20, 15);
-            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
-            ctx.fillRect(ix + 10, iy + 40, 20, 5); // Belly
-            
-            // Head
             ctx.beginPath();
-            ctx.arc(ix + 20, iy + 15, 10, 0, Math.PI * 2);
+            ctx.roundRect(ix + 12, iyWalk + 40, 8, 25, 4); // Left leg
+            ctx.roundRect(ix + 22, iyWalk + 40, 8, 25, 4); // Right leg
+            ctx.fill();
+
+            // Body (bikini-style)
+            // Hips/Bottoms
+            ctx.fillStyle = '#ec4899'; // Hot pink
+            ctx.beginPath();
+            ctx.moveTo(ix + 10, iyWalk + 35);
+            ctx.lineTo(ix + 30, iyWalk + 35);
+            ctx.lineTo(ix + 25, iyWalk + 45);
+            ctx.lineTo(ix + 15, iyWalk + 45);
+            ctx.closePath();
+            ctx.fill();
+            // Torso
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            ctx.beginPath();
+            ctx.moveTo(ix + 15, iyWalk + 35);
+            ctx.lineTo(ix + 25, iyWalk + 35);
+            ctx.lineTo(ix + 28, iyWalk + 25);
+            ctx.lineTo(ix + 12, iyWalk + 25);
+            ctx.closePath();
+            ctx.fill();
+            // Top
+            ctx.fillStyle = '#ec4899'; // Hot pink
+            ctx.beginPath();
+            ctx.moveTo(ix + 12, iyWalk + 25);
+            ctx.lineTo(ix + 28, iyWalk + 25);
+            ctx.lineTo(ix + 20, iyWalk + 30);
+            ctx.closePath();
             ctx.fill();
             
+            // Head
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            ctx.beginPath();
+            ctx.arc(ix + 20, iyWalk + 15, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Long flowing hair
+            ctx.fillStyle = '#fde047'; // Blonde
+            ctx.beginPath();
+            ctx.moveTo(ix + 20, iyWalk + 5);
+            ctx.quadraticCurveTo(ix + 5, iyWalk + 20, ix + 10, iyWalk + 40);
+            ctx.quadraticCurveTo(ix + 20, iyWalk + 30, ix + 30, iyWalk + 40);
+            ctx.quadraticCurveTo(ix + 35, iyWalk + 20, ix + 20, iyWalk + 5);
+            ctx.fill();
+            
+            // Face details
+            // Big Lips
+            ctx.fillStyle = '#f43f5e'; // Rose red
+            ctx.beginPath();
+            ctx.arc(ix + 20, iyWalk + 18, 3, 0, Math.PI, false);
+            ctx.fill();
             // Sunglasses
             ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(ix + 15, iy + 12, 12, 4);
-            
-            // Hair (Influencer bun)
-            ctx.fillStyle = '#4b2c20';
             ctx.beginPath();
-            ctx.arc(ix + 20, iy + 5, 5, 0, Math.PI * 2);
+            ctx.roundRect(ix + 13, iyWalk + 12, 14, 4, 2);
             ctx.fill();
 
             // Phone/Camera
-            ctx.fillStyle = '#333';
             const armAngle = this.isPosing ? -0.5 : 0.5;
             ctx.save();
-            ctx.translate(ix + 25, iy + 30);
+            ctx.translate(ix + 25, iyWalk + 30);
             ctx.rotate(armAngle);
-            ctx.fillRect(0, 0, 15, 6); // Arm
+            ctx.fillStyle = GAME_CONFIG.COLORS.TANNED;
+            ctx.fillRect(0, 0, 15, 5); // Arm
             ctx.fillStyle = '#000';
             ctx.fillRect(12, -4, 5, 10); // Phone
             
