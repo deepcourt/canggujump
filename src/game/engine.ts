@@ -483,6 +483,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                             const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
                             msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Knockartist!");
                             state.knockOffCombo = 0;
+                            if (state.player.lives < 3) state.player.lives++;
                         }
 
                     } else if (isStompable && isStomping) {
@@ -509,6 +510,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                             const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
                             msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Knockartist!");
                             state.knockOffCombo = 0;
+                            if (state.player.lives < 3) state.player.lives++;
                         }
 
                     } else if (state.player.hitTimer <= 0) {
@@ -555,6 +557,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                             const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
                             msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Super Jumper!");
                             state.jumpCombo = 0;
+                            if (state.player.lives < 3) state.player.lives++;
                         }
                     }
                 }
