@@ -368,25 +368,6 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                     }
                 }
 
-                // --- JUMP COMBO ---
-                if (obs.active && !obs.isCrashed && !obs.isCleared && obs.x + obs.width < state.player.x) {
-                    obs.isCleared = true;
-                    // Ignore non-dangerous obstacles for combo
-                    if (obs.type !== ObstacleType.PROTEIN_SHAKE) {
-                        state.knockOffCombo = 0;
-                        state.jumpCombo++;
-                        if (state.jumpCombo >= 3) {
-                            if (state.starImages.length > 0) {
-                                const p = getFromPool(state.particlePool, () => new Particle());
-                                const starImg = state.starImages[Math.floor(Math.random() * state.starImages.length)];
-                                p.spawn(state.player.x + state.player.width / 2, state.player.y - 30, '#fff', 'EXPLOSION', starImg);
-                            }
-                            const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
-                            msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Super Jumper!");
-                            state.jumpCombo = 0;
-                        }
-                    }
-                }
             }
         });
 
@@ -568,6 +549,26 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                         }
                     }
                 }
+
+                // --- JUMP COMBO ---
+                if (obs.active && !obs.isCrashed && !obs.isCleared && obs.x + obs.width < state.player.x) {
+                    obs.isCleared = true;
+                    // Ignore non-dangerous obstacles for combo
+                    if (obs.type !== ObstacleType.PROTEIN_SHAKE) {
+                        state.knockOffCombo = 0;
+                        state.jumpCombo++;
+                        if (state.jumpCombo >= 3) {
+                            if (state.starImages.length > 0) {
+                                const p = getFromPool(state.particlePool, () => new Particle());
+                                const starImg = state.starImages[Math.floor(Math.random() * state.starImages.length)];
+                                p.spawn(state.player.x + state.player.width / 2, state.player.y - 30, '#fff', 'EXPLOSION', starImg);
+                            }
+                            const msg = getFromPool(state.comboMessagePool, () => new ComboMessage());
+                            msg.spawn(GAME_CONFIG.CANVAS_WIDTH / 2, 100, "Super Jumper!");
+                            state.jumpCombo = 0;
+                        }
+                    }
+                }
             }
         });
 
@@ -581,7 +582,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
                     state.player.dy > 0) // Must be falling onto it
                 {
                     spring.use();
-                    state.player.dy = -GAME_CONFIG.JUMP_FORCE * 2.2; // Super jump!
+                    state.player.dy = -GAME_CONFIG.JUMP_FORCE * 2; // Super jump!
                     SoundSynth.playBoing();
 
                     // Flash effect
