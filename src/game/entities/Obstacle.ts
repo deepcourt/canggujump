@@ -24,6 +24,10 @@ export class Obstacle {
     crashVY: number = 0;
     crashRotation: number = 0;
     dogVariant: { color: string, scale: number } = { color: GAME_CONFIG.COLORS.DOG, scale: 1 };
+    dogImage: HTMLImageElement | null = null;
+    // Padel Ball logic
+    padelVY: number = 0;
+    padelIsBouncing: boolean = false;
     // Influencer logic
     selfieTimer: number = 0;
     isPosing: boolean = false;
@@ -40,6 +44,8 @@ export class Obstacle {
         this.isPosing = false;
         this.cloudTimer = 0;
         this.smokeTimer = 0;
+        this.padelIsBouncing = false;
+        this.padelVY = 0;
 
         this.type = config.type;
         this.width = config.width;
@@ -66,6 +72,16 @@ export class Obstacle {
             this.crashRotation += 10 * dt;
             if (this.y > 600) this.active = false;
             return;
+        }
+
+        if (this.type === ObstacleType.PADEL_BALL && this.padelIsBouncing) {
+            this.padelVY += GAME_CONFIG.GRAVITY * dt * 0.4; // A bit of gravity
+            this.y += this.padelVY * dt;
+            const groundY = GAME_CONFIG.GROUND_Y - this.height;
+            if (this.y >= groundY) {
+                this.y = groundY;
+                this.padelVY *= -0.65; // Bounce with energy loss
+            }
         }
 
         let currentSpeed = speed * this.speedMultiplier;
@@ -259,30 +275,9 @@ export class Obstacle {
             ctx.restore();
 
         } else if (this.type === ObstacleType.DOG) {
-            // More realistic dog - Facing Left (towards player)
-            ctx.fillStyle = this.dogVariant.color;
-            const s = this.dogVariant.scale;
-            // Body
-            ctx.beginPath();
-            ctx.roundRect(ix + 10 * s, iy + 10 * s, 40 * s, 18 * s, 5 * s);
-            ctx.fill();
-            // Head (Facing Left)
-            ctx.beginPath();
-            ctx.roundRect(ix, iy, 15 * s, 15 * s, 3 * s);
-            ctx.fill();
-            // Ears
-            ctx.fillRect(ix + 5 * s, iy - 5 * s, 5 * s, 8 * s);
-            // Tail
-            ctx.beginPath();
-            ctx.moveTo(ix + 50 * s, iy + 15 * s);
-            ctx.quadraticCurveTo(ix + 65 * s, iy + 5 * s, ix + 60 * s, iy + 20 * s);
-            ctx.strokeStyle = this.dogVariant.color;
-            ctx.lineWidth = 4 * s;
-            ctx.stroke();
-            // Legs
-            const legOffset = Math.sin(Date.now() / 60) * 8;
-            ctx.fillRect(ix + 15 * s, iy + 25 * s, 6 * s, 10 * s + legOffset);
-            ctx.fillRect(ix + 35 * s, iy + 25 * s, 6 * s, 10 * s - legOffset);
+            if (this.dogImage) {
+                ctx.drawImage(this.dogImage, ix, iy, this.width, this.height);
+            }
         } else if (this.type === ObstacleType.BIRD) {
             ctx.fillStyle = GAME_CONFIG.COLORS.BIRD;
             ctx.beginPath();

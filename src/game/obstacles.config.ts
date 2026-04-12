@@ -43,24 +43,11 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
     },
     {
         type: ObstacleType.DOG,
-        width: 55, // default
-        height: 35, // default
+        width: 55,
+        height: 35,
         y: GAME_CONFIG.GROUND_Y - 35,
         weight: 10,
         speedMultiplier: 1.4,
-        customSpawn: (obs) => {
-            const dogR = Math.random();
-            if (dogR > 0.7) {
-                obs.dogVariant = { color: '#4B5563', scale: 0.7 }; // Small grey dog
-            } else if (dogR > 0.4) {
-                obs.dogVariant = { color: '#374151', scale: 1.1 }; // Large dark grey dog
-            } else {
-                obs.dogVariant = { color: GAME_CONFIG.COLORS.DOG, scale: 1.0 }; // Standard brown dog
-            }
-            obs.width = 55 * obs.dogVariant.scale;
-            obs.height = 35 * obs.dogVariant.scale;
-            obs.y = GAME_CONFIG.GROUND_Y - obs.height;
-        }
     },
     {
         type: ObstacleType.SCOOTER,
@@ -92,11 +79,19 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
     },
     {
         type: ObstacleType.PADEL_BALL,
-        width: 40,
-        height: 40,
-        y: 100,
-        weight: 6,
-        speedMultiplier: 1.8,
+        width: 25,
+        height: 25,
+        y: GAME_CONFIG.GROUND_Y - 25, // Default to rolling on the ground
+        weight: 5, // A bit less frequent
+        speedMultiplier: 1.1,
+        customSpawn: (obs) => {
+            // 40% chance to be a bouncer
+            if (Math.random() > 0.6) {
+                obs.padelIsBouncing = true;
+                obs.y = 100; // Start higher up
+                obs.padelVY = -150; // Initial velocity
+            }
+        }
     },
     {
         type: ObstacleType.INFLUENCER,
