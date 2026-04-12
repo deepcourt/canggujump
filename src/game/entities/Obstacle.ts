@@ -18,6 +18,7 @@ export class Obstacle {
     cloudTimer: number = 0;
     smokeTimer: number = 0;
     hasSurfboard: boolean = false;
+    helmetColor: string = GAME_CONFIG.COLORS.HELMET;
     honked: boolean = false;
     isCleared: boolean = false;
     isCrashed: boolean = false;
@@ -60,6 +61,7 @@ export class Obstacle {
 
         // Reset special properties before custom spawn
         this.hasSurfboard = false;
+        this.helmetColor = GAME_CONFIG.COLORS.HELMET;
         this.dogVariant = { color: GAME_CONFIG.COLORS.DOG, scale: 1.0 };
 
         if (config.customSpawn) {
@@ -194,7 +196,7 @@ export class Obstacle {
                 ctx.fillRect(ix + 25 + offset, iy + 5, 18, 25); // Torso
                 
                 // Sphere Helmet
-                ctx.fillStyle = GAME_CONFIG.COLORS.HELMET;
+                ctx.fillStyle = this.helmetColor;
                 ctx.beginPath();
                 ctx.arc(ix + 34 + offset, iy - 1, 10, 0, Math.PI * 2);
                 ctx.fill();

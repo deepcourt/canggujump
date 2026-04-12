@@ -67,6 +67,8 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         weight: 10,
         customSpawn: (obs) => {
             obs.hasSurfboard = Math.random() > 0.5;
+            const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
+            obs.helmetColor = colors[Math.floor(Math.random() * colors.length)];
         }
     },
     {
@@ -75,6 +77,10 @@ export const OBSTACLE_DEFINITIONS: ObstacleConfig[] = [
         height: 55,
         y: GAME_CONFIG.GROUND_Y - 55 - 2, // Raise slightly to sit on top of grass
         weight: 9,
+        customSpawn: (obs) => {
+            const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
+            obs.helmetColor = colors[Math.floor(Math.random() * colors.length)];
+        }
     },
     {
         type: ObstacleType.BIRD,

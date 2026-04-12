@@ -136,7 +136,11 @@ export const createBodyBuilder = (): PlayerEntity => ({
 
             // Visor
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillRect(helmetCenterX - helmetRadius * 0.8, helmetCenterY - (2/80)*h, helmetRadius * 1.6, (6/80)*h);
+            const visorW = helmetRadius * 1.6;
+            const visorH = (6/80)*h;
+            ctx.beginPath();
+            ctx.roundRect(helmetCenterX - helmetRadius * 0.8, helmetCenterY - (2/80)*h, visorW, visorH, 2 * sizeMult);
+            ctx.fill();
         } else {
             // Head - Rounded
             ctx.beginPath();
