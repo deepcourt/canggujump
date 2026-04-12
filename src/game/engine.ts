@@ -12,6 +12,7 @@ import { Particle } from './entities/Particle';
 import { GroundDetail } from './entities/Ground';
 import { Obstacle } from './entities/Obstacle';
 import { SceneryElement } from './entities/Scenery';
+import { Spring } from './entities/Spring';
 
 const getRandomObstacleConfig = () => {
     const totalWeight = OBSTACLE_DEFINITIONS.reduce((sum, def) => sum + def.weight, 0);
@@ -52,6 +53,11 @@ export interface GameEngineState {
     explosionImages: HTMLImageElement[];
     fartImages: HTMLImageElement[];
     dogImage: HTMLImageElement | null;
+    springPool: Spring[];
+    springSpawnTimer: number;
+    springImage: HTMLImageElement | null;
+    springOutImage: HTMLImageElement | null;
+    flashImages: HTMLImageElement[];
 }
 
 export interface GameEngineCallbacks {
@@ -94,7 +100,12 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         lastHitObstacleType: null,
         explosionImages: [],
         fartImages: [],
-        dogImage: null
+        dogImage: null,
+        springPool: Array.from({ length: 5 }, () => new Spring()),
+        springSpawnTimer: 5,
+        springImage: null,
+        springOutImage: null,
+        flashImages: []
     };
 
     // Pre-load explosion images
@@ -113,6 +124,18 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
     loadImages(['./images/animal-dog.png']).then(([img]) => {
         state.dogImage = img;
     }).catch(err => console.error("Failed to load dog image:", err));
+
+    // Pre-load spring and flash images
+    loadImages(['./images/spring.svg', './images/spring_out.svg']).then(([springImg, springOutImg]) => {
+        state.springImage = springImg;
+        state.springOutImage = springOutImg;
+    }).catch(err => console.error("Failed to load spring images:", err));
+
+    const flashPaths = Array.from({ length: 9 }, (_, i) => `./images/flash0${i}.png`);
+    loadImages(flashPaths).then(imgs => {
+        state.flashImages = imgs;
+    }).catch(err => console.error("Failed to load flash images:", err));
+
 
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
@@ -162,6 +185,16 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             }
             scenery.spawn(GAME_CONFIG.CANVAS_WIDTH + 200, type);
             state.scenerySpawnTimer = 0.6 + Math.random() * 1.5;
+        }
+    };
+
+    const spawnSpring = (dt: number) => {
+        state.springSpawnTimer -= dt;
+        if (state.springSpawnTimer <= 0 && state.springImage && state.springOutImage) {
+            const spring = getFromPool(state.springPool, () => new Spring());
+            spring.spawn(GAME_CONFIG.CANVAS_WIDTH, state.springImage, state.springOutImage);
+            // Spawn every 10-20 seconds
+            state.springSpawnTimer = 10 + Math.random() * 10;
         }
     };
 
@@ -260,6 +293,9 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         spawnScenery(dt);
         state.sceneryPool.forEach(s => s.active && (s.update(dt, state.gameSpeed), s.draw(ctx)));
 
+        spawnSpring(dt);
+        state.springPool.forEach(s => s.active && (s.update(dt, state.gameSpeed), s.draw(ctx)));
+
         ctx.strokeStyle = GAME_CONFIG.COLORS.PRIMARY;
         ctx.fillStyle = GAME_CONFIG.COLORS.PRIMARY;
         ctx.lineWidth = 2;
@@ -345,6 +381,30 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
             }
         });
 
+        // Spring collision
+        state.springPool.forEach(spring => {
+            if (spring.active && !spring.isSprung) {
+                if (state.player.x < spring.x + spring.width &&
+                    state.player.x + state.player.width > spring.x &&
+                    state.player.y + state.player.height >= spring.y &&
+                    state.player.y < spring.y + spring.height &&
+                    state.player.dy > 0) // Must be falling onto it
+                {
+                    spring.use();
+                    state.player.dy = -GAME_CONFIG.JUMP_FORCE * 3; // Super jump!
+                    SoundSynth.playBoing();
+
+                    // Flash effect
+                    if (state.flashImages.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * state.flashImages.length);
+                        const flashImg = state.flashImages[randomIndex];
+                        const p = getFromPool(state.particlePool, () => new Particle());
+                        p.spawn(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2, '#fff', 'EXPLOSION', flashImg);
+                    }
+                }
+            }
+        });
+
         if (state.gameRunning) {
             state.score += 60 * dt;
             ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "right";
@@ -361,6 +421,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.obstaclePool.forEach(p => p.active = false);
         state.groundPool.forEach(p => p.active = false);
         state.sceneryPool.forEach(p => p.active = false);
+        state.springPool.forEach(p => p.active = false);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 30 + Math.random() * 60) getFromPool(state.groundPool, () => new GroundDetail()).spawn(x);
         for (let x = 0; x < GAME_CONFIG.CANVAS_WIDTH; x += 150 + Math.random() * 200) getFromPool(state.sceneryPool, () => new SceneryElement()).spawn(x, 'PALM');
         state.score = 0;
@@ -369,6 +430,7 @@ export const createGameEngine = (callbacks: GameEngineCallbacks): GameEngine => 
         state.spawnTimer = 0;
         state.groundSpawnTimer = 0;
         state.scenerySpawnTimer = 0;
+        state.springSpawnTimer = 5;
         state.bgTimer = 0;
         state.bgScrollX = 0;
         state.bgType = 'OCEAN';

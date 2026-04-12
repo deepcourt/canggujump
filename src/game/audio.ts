@@ -28,6 +28,7 @@ export const SoundSynth = {
         SoundSynth.cacheSound('hit', SoundSynth.createHitBuffer());
         SoundSynth.cacheSound('powerup', SoundSynth.createPowerupBuffer());
         SoundSynth.cacheSound('click', SoundSynth.createClickBuffer());
+        SoundSynth.cacheSound('boing', SoundSynth.createBoingBuffer());
         SoundSynth.cacheSound('roar', SoundSynth.createNoiseBuffer(0.8));
 
         // Load background music
@@ -143,11 +144,25 @@ export const SoundSynth = {
         return buffer;
     },
 
+    createBoingBuffer: () => {
+        const ctx = SoundSynth.ctx!;
+        const duration = 0.3;
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            const t = i / ctx.sampleRate;
+            const freq = 600 * Math.exp(-t * 20); // Fast descending pitch
+            data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-t * 10) * 0.7;
+        }
+        return buffer;
+    },
+
     playJump: () => SoundSynth.play('jump', 0.15),
     playStep: () => SoundSynth.play('step', 0.05),
     playHit: () => SoundSynth.play('hit', 0.2),
     playPowerup: () => SoundSynth.play('powerup', 0.2),
     playClick: () => SoundSynth.play('click', 0.1),
+    playBoing: () => SoundSynth.play('boing', 0.4),
 
     setMuted: (isMuted: boolean) => {
         SoundSynth.muted = isMuted;
