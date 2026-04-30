@@ -45,9 +45,12 @@ const App: React.FC = () => {
       {/* VibeJam Portal Button */}
       <a 
         href="https://vibej.am/portal/2026?ref=https://canggujump.carmelospano.com/"
-        
+        target="_blank"
+        rel="noopener noreferrer"
         className="fixed bottom-5 right-5 bg-purple-600 text-white px-4 py-2 rounded-full shadow-lg z-[9999] animate-bounce font-bold text-[10px] uppercase border-2 border-white"
       >
+
+      </a>
         🌀 Portal
       </a>
     </div>
