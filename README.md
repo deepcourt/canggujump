@@ -1,6 +1,9 @@
 # 🌴 CANGGU JUMP
 
+### [🎮 PLAY GAME HERE](https://canggujump.carmelospano.com/)
+
 **Built for Pieter Levels' VibeJam 2026**
+*Compliance Note: As per VibeJam rules, 90%+ of this code was AI-generated using Aider and Gemini via Vibe Coding.*
 
 Canggu Jump is a high-energy, 8-bit rhythmic runner set in the chaotic and vibrant streets of Canggu, Bali. You play as a legendary Canggu Bodybuilder dodging the everyday obstacles of island life.
 
